@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/lexicon-agent-pipeline/lexicon_record.schema.json",
+  "title": "German–Chinese A1/A2 lexicon record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "first", "word", "base_form", "infinitive", "present", "past", "perfect",
+    "participle", "subjunctive", "imperative", "third_person", "plural",
+    "comparative", "superlative", "case", "article", "reflexive", "separable",
+    "auxiliary", "preposition", "collocation", "meaning", "example",
+    "translation", "level", "pos", "register", "region", "notes", "source"
+  ],
+  "properties": {
+    "first": { "type": "integer", "minimum": 1 },
+    "word": { "type": "string", "minLength": 1 },
+    "base_form": { "type": "string", "minLength": 1 },
+    "infinitive": { "type": "string", "minLength": 1 },
+    "present": { "type": "string", "minLength": 1 },
+    "past": { "type": "string", "minLength": 1 },
+    "perfect": { "type": "string", "minLength": 1 },
+    "participle": { "type": "string", "minLength": 1 },
+    "subjunctive": { "type": "string", "minLength": 1 },
+    "imperative": { "type": "string", "minLength": 1 },
+    "third_person": { "type": "string", "minLength": 1 },
+    "plural": { "type": "string", "minLength": 1 },
+    "comparative": { "type": "string", "minLength": 1 },
+    "superlative": { "type": "string", "minLength": 1 },
+    "case": { "type": "string", "minLength": 1 },
+    "article": { "type": "string", "minLength": 1 },
+    "reflexive": { "type": "string", "minLength": 1 },
+    "separable": { "type": "string", "minLength": 1 },
+    "auxiliary": { "type": "string", "minLength": 1 },
+    "preposition": { "type": "string", "minLength": 1 },
+    "collocation": { "type": "string", "minLength": 1 },
+    "meaning": { "type": "string", "minLength": 1, "not": { "const": "—" } },
+    "example": { "type": "string", "minLength": 1 },
+    "translation": { "type": "string", "minLength": 1 },
+    "level": { "enum": ["A1", "A2"] },
+    "pos": {
+      "enum": [
+        "Adjektiv", "Adverb", "Artikel", "Interjektion", "Konjunktion",
+        "Nomen", "Partikel", "Phrase", "Präposition", "Pronomen", "Verb"
+      ]
+    },
+    "register": { "enum": ["neutral", "formell", "informell", "—"] },
+    "region": { "enum": ["Deutschland", "Österreich", "Schweiz", "D-A-CH", "—"] },
+    "notes": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 }
+  }
+}

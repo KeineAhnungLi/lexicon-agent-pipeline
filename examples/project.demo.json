@@ -1,0 +1,22 @@
+{
+  "project_name": "public_mock_demo",
+  "repository_root": "..",
+  "input_file": "words.demo.tsv",
+  "workspace": "demo_workspace",
+  "output_dir": "expected/runtime",
+  "prompt_template": "../prompts/prompt_template.md",
+  "review_prompt_template": "../prompts/review_prompt_template.md",
+  "generation_spec": "../prompts/generation_spec.md",
+  "examples": "public_examples.jsonl",
+  "schema_file": "../schemas/lexicon_record.schema.json",
+  "batch_size": 15,
+  "start_index": 1,
+  "final_filename": "demo_lexicon.ai-reviewed.jsonl",
+  "expected_fields": 30,
+  "provider": "mock",
+  "provider_options": {
+    "max_validation_attempts": 2,
+    "generation_fixture": "tests/fixtures/mock/generated.jsonl",
+    "review_fixture": "tests/fixtures/mock/reviewed.jsonl"
+  }
+}

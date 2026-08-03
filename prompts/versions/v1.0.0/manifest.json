@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "profile": "German–Chinese A1/A2",
+  "files": {
+    "prompt_template.md": "c1b3b3f388d2f826a3a9cda4a567e1ef3623f4b21a29222e394839dd9d667d8e",
+    "review_prompt_template.md": "069312f3de1106cdead0f2fed4ef0a2b12ea5feefdd260d3e91dc38b4906591e"
+  }
+}

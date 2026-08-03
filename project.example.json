@@ -1,0 +1,24 @@
+{
+  "project_name": "demo_lexicon",
+  "repository_root": ".",
+  "input_file": "examples/words.demo.tsv",
+  "workspace": "workspace",
+  "output_dir": "outputs/local",
+  "prompt_template": "prompts/prompt_template.md",
+  "review_prompt_template": "prompts/review_prompt_template.md",
+  "generation_spec": "prompts/generation_spec.md",
+  "examples": "examples/public_examples.jsonl",
+  "schema_file": "schemas/lexicon_record.schema.json",
+  "batch_size": 15,
+  "start_index": 1,
+  "final_filename": "demo_lexicon.ai-reviewed.jsonl",
+  "expected_fields": 30,
+  "provider": "codex-cli",
+  "provider_options": {
+    "executable": "codex",
+    "timeout_seconds": 1800,
+    "max_validation_attempts": 2,
+    "model": null,
+    "extra_args": ["--sandbox", "workspace-write", "--ephemeral"]
+  }
+}

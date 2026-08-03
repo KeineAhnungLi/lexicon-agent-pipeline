@@ -1,0 +1,14 @@
+CC0 1.0 Universal
+
+The files `examples/public_examples.jsonl`, `examples/words.demo.tsv`, and
+`tests/fixtures/mock/*.jsonl` are dedicated to the public domain under the
+Creative Commons CC0 1.0 Universal Public Domain Dedication.
+
+To the extent possible under law, KeineAhnungLi has waived all copyright and
+related or neighboring rights to these public synthetic data files worldwide.
+The dedication is made without warranties or endorsement.
+
+Canonical legal code:
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+SPDX identifier: CC0-1.0

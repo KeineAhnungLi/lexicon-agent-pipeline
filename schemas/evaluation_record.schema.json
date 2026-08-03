@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Human-calibrated semantic judge record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "word", "field", "reference", "candidate", "label", "severity", "error_type",
+    "reason", "judge_model", "prompt_version", "evaluated_at", "input_sha256",
+    "human_verified"
+  ],
+  "properties": {
+    "word": { "type": "string", "minLength": 1 },
+    "field": { "type": "string", "minLength": 1 },
+    "reference": { "type": "string" },
+    "candidate": { "type": "string" },
+    "label": {
+      "enum": [
+        "correct", "acceptable_variant", "minor_error", "major_error",
+        "missing_core_information", "hallucinated_information", "needs_human_review"
+      ]
+    },
+    "severity": { "enum": ["none", "minor", "major", "unknown"] },
+    "error_type": { "type": ["string", "null"] },
+    "reason": { "type": "string" },
+    "judge_model": { "type": "string" },
+    "prompt_version": { "type": "string" },
+    "evaluated_at": { "type": "string", "format": "date-time" },
+    "input_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "human_verified": { "type": "boolean" }
+  }
+}

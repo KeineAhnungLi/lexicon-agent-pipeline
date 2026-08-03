@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+site
+workspace
+workspaces
+examples/demo_workspace
+examples/expected/runtime
+src/*.egg-info
+reports
+outputs
+__pycache__
+*.pyc

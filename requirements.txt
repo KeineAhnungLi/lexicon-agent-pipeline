@@ -1,0 +1,2 @@
+# The core package uses only the Python standard library.
+# Install development tools with: pip install -e ".[dev,docs]"

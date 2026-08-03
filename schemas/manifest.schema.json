@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pipeline manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version", "created_at", "config_hash", "prompt_hash", "review_prompt_hash",
+    "generation_spec_hash", "examples_hash", "schema_hash", "input_hash", "batches"
+  ],
+  "properties": {
+    "manifest_version": { "const": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "config_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "review_prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "generation_spec_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "examples_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "schema_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "batches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "start", "end", "words", "state", "attempts"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "start": { "type": "integer", "minimum": 1 },
+          "end": { "type": "integer", "minimum": 1 },
+          "words": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "state": {
+            "enum": ["prepared", "rendered", "generated", "reviewed", "failed"]
+          },
+          "attempts": { "type": "integer", "minimum": 0 },
+          "last_error": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

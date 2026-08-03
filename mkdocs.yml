@@ -1,0 +1,25 @@
+site_name: Lexicon Agent Pipeline
+site_description: Reproducible dual-agent structured lexicon generation and review
+docs_dir: docs
+theme:
+  name: material
+nav:
+  - Overview: PROJECT_OVERVIEW.md
+  - Architecture: ARCHITECTURE.md
+  - Agent independence: AGENT_INDEPENDENCE.md
+  - Pipeline guide: PIPELINE_GUIDE.md
+  - Schema: SCHEMA.md
+  - Validation boundary: VALIDATION.md
+  - Providers: PROVIDERS.md
+  - Recovery: RECOVERY.md
+  - Prompt versioning: PROMPT_VERSIONING.md
+  - Evaluation: EVALUATION.md
+  - Error taxonomy: ERROR_TAXONOMY.md
+  - Limitations: LIMITATIONS.md
+  - Data policy: DATA_POLICY.md
+  - Security: SECURITY.md
+  - Case study: CASE_STUDY.md
+  - Prompt changelog: PROMPT_CHANGELOG.md
+  - Deployment: DEPLOYMENT.md
+  - Release audit: PUBLIC_RELEASE_AUDIT.md
+strict: true
