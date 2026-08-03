@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Any
 
 from lexicon_pipeline.config import ProjectConfig, ensure_workspace_is_safe
 from lexicon_pipeline.errors import ConfigurationError
@@ -29,7 +30,7 @@ def prepare_workspace(
     *,
     force_reset: bool = False,
     confirmed: bool = False,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     ensure_workspace_is_safe(config)
     workspace = config.workspace
     if workspace.exists() and any(workspace.iterdir()):

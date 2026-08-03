@@ -5,13 +5,14 @@ import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import cast
 
 from lexicon_pipeline.audit import audit_public_release, write_audit_report
 from lexicon_pipeline.config import ProjectConfig, load_config
 from lexicon_pipeline.errors import PipelineError
 from lexicon_pipeline.manifest import find_batch, read_manifest
 from lexicon_pipeline.merging import merge_reviewed
-from lexicon_pipeline.orchestration import run_pipeline
+from lexicon_pipeline.orchestration import RunMode, run_pipeline
 from lexicon_pipeline.prepare import prepare_workspace
 from lexicon_pipeline.rendering import render_prompts
 from lexicon_pipeline.reporting import build_quality_report
@@ -196,13 +197,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "run":
             if args.generation_only and args.review_only:
                 raise PipelineError("choose only one of --generation-only and --review-only")
-            mode = (
-                "generation-only"
-                if args.generation_only
-                else "review-only"
-                if args.review_only
-                else args.mode
-            )
+            mode: RunMode
+            if args.generation_only:
+                mode = "generation-only"
+            elif args.review_only:
+                mode = "review-only"
+            else:
+                mode = cast(RunMode, args.mode)
             manifest = run_pipeline(
                 config,
                 mode=mode,

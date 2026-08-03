@@ -71,7 +71,7 @@ def build_quality_report(config: ProjectConfig) -> tuple[Path, Path, dict[str, A
     json_path = config.output_dir / "quality_report.json"
     md_path = config.output_dir / "QUALITY_REPORT.md"
     atomic_write_json(json_path, data)
-    lines = [
+    lines: list[str] = [
         "# Quality report",
         "",
         f"- Generated: {data['generated_at']}",
@@ -82,7 +82,7 @@ def build_quality_report(config: ProjectConfig) -> tuple[Path, Path, dict[str, A
         f"- Mechanical validation: {'PASS' if data['mechanical_validation_passed'] else 'FAIL'}",
         "- Linguistic accuracy verified: **No**",
         "",
-        data["notice"],
+        str(data["notice"]),
         "",
         "| Batch | State | Valid | Rows | Generation run | Review run |",
         "|---:|---|:---:|---:|---|---|",
