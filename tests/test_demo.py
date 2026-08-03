@@ -8,7 +8,6 @@ from lexicon_pipeline.config import ProjectConfig
 
 
 def test_cli_demo_is_offline_and_complete(temp_config: ProjectConfig) -> None:
-    workspace = temp_config.workspace
     result = main(
         ["--config", str(temp_config.config_path), "demo", "--reset"]
     )
