@@ -1,4 +1,4 @@
-# Lexicon generation task — prompt v1.0.0
+# Lexicon generation task — prompt v1.1.0
 
 You are the generation agent for batch `{{BATCH_ID}}`, covering global rows
 `{{START_INDEX}}` through `{{END_INDEX}}`.
@@ -12,11 +12,23 @@ Read and judge every entry individually. Use your language knowledge to determin
 grammar, meaning, usage, and example. Do not infer semantic content mechanically from suffixes, do
 not use a built-in translation lookup table, and do not fill semantic fields from templates.
 Ambiguous capitalization, punctuation, abbreviations, reflexive forms, separable verbs, bracketed
-variants, fixed expressions, and polysemy require explicit linguistic judgment.
+variants, fixed expressions, homographs, and polysemy require explicit linguistic judgment.
 
 This is a German–Chinese A1/A2 reference profile. Chinese text must be natural simplified Chinese.
 German examples must be short, idiomatic, and consistent with the selected sense. Never invent a
 grammatical form merely to avoid a missing value.
+
+## Input identity and optional POS hints
+
+A batch line normally has the form `INDEX. WORD`. It may additionally end with a tab-separated
+annotation such as `[expected_pos=adj]` or `[expected_pos=verb]`. That annotation is metadata, not
+part of `word`. Reproduce only the lexical WORD in the output `word` field.
+
+When `expected_pos` is present, treat it as an authoritative disambiguation constraint for the
+intended lexical entry. Common source shorthands such as `adj`, `adv`, `noun`, `verb`, `prep`, and
+`pron` must be mapped to the canonical `pos` enum below. This permits legitimate homographs such as
+the same surface form appearing once as an adjective and once as a verb. Do not merge such rows or
+silently choose a different part of speech.
 
 ## Required 30-field order
 
@@ -30,7 +42,8 @@ Every object must contain these keys in exactly this order:
 ## Field rules
 
 - `first`: consecutive global integer, beginning at `{{START_INDEX}}`.
-- `word`: reproduce the input line exactly, including case, spaces, punctuation, and brackets.
+- `word`: reproduce the lexical input WORD exactly, including case, spaces, punctuation, and
+  brackets; exclude any `[expected_pos=...]` metadata annotation.
 - `base_form`: canonical dictionary form; preserve a fixed expression as a phrase.
 - Inapplicable or genuinely unavailable fields: exactly `—` (U+2014). Never use null or an empty
   string.
@@ -54,7 +67,8 @@ Every object must contain these keys in exactly this order:
 - `example` and `translation`: a matched German–Chinese pair. Both must be present or both `—`.
 - `level`: exactly `A1` or `A2`.
 - `pos`: exactly one of `Adjektiv`, `Adverb`, `Artikel`, `Interjektion`, `Konjunktion`, `Nomen`,
-  `Partikel`, `Phrase`, `Präposition`, `Pronomen`, `Verb`.
+  `Partikel`, `Phrase`, `Präposition`, `Pronomen`, `Verb`. If `expected_pos` metadata is present,
+  this field must match that intended part of speech.
 - `register`: `neutral`, `formell`, `informell`, or `—`.
 - `region`: `Deutschland`, `Österreich`, `Schweiz`, `D-A-CH`, or `—`.
 - `notes`: a brief disambiguation or usage note, or `—`.
@@ -66,6 +80,9 @@ These examples illustrate reasoning only; they are not output rows:
 
 - `recht` is commonly an adjective/adverb (“quite”, “right”), while `Recht` is a noun (“law” or
   “right”). Do not erase the distinction by lowercasing.
+- Two rows may both contain `überlegen` if one carries `[expected_pos=adj]` and the other
+  `[expected_pos=verb]`. Generate two distinct entries while keeping `word` exactly `überlegen` in
+  both rows.
 - `sich ausruhen` is reflexive and separable; both properties must be represented coherently.
 - `(Rad-)Tour` contains an optional element. Preserve the exact `word` while choosing a useful
   canonical `base_form` and explaining the notation in `notes`.
@@ -90,5 +107,5 @@ different example.
 {{WORD_LIST}}
 
 Before returning, silently verify: exact row count; valid JSONL; 30 keys in canonical order; global
-`first` sequence; exact `word` preservation; allowed enums; paired example/translation; no blank
-lines.
+`first` sequence; exact lexical `word` preservation; expected POS constraints; allowed enums;
+paired example/translation; no blank lines.
