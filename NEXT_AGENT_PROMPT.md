@@ -11,9 +11,24 @@ size, or a single self-review call.
 
 If the repository was cloned by an outer agent from a parent directory that contains only one
 word-list file, preserve that source file. Copy or convert it into ignored
-`local_inputs/words.tsv`, with the single header `word`, preserving entry text and order exactly.
-Container-format conversion must not lowercase, lemmatize, translate, deduplicate, or otherwise
-normalize lexical content. Never commit the production input.
+`local_inputs/words.tsv`, preserving entry text and order exactly. The first column must be `word`.
+If the source contains a useful part-of-speech discriminator, preserve it as an optional
+`expected_pos` column. Container-format conversion must not lowercase, lemmatize, translate,
+deduplicate, or otherwise normalize lexical content. Never commit the production input.
+
+Exact duplicate surface forms without disambiguation remain an input blocker. However, legitimate
+homographs are not duplicates when the source identifies distinct parts of speech. Represent them
+as separate rows with the same `word` and unique non-empty `expected_pos` values, for example:
+
+```text
+word	expected_pos
+überlegen	adj
+überlegen	verb
+```
+
+Do not alter the lexical surface form to encode POS. The pipeline renders POS as metadata, requires
+the output `word` to stay unchanged, and mechanically checks the canonical output `pos` against
+recognized POS hints.
 
 Copy `project.example.json` to ignored `project.json`, verify that Codex CLI is installed and already
 authenticated, then use the repository CLI rather than reimplementing the pipeline:
