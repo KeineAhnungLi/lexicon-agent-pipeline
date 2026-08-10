@@ -36,7 +36,7 @@ def _record_provenance(
             "provider": provider,
             "model": model,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "prompt_version": "1.0.0",
+            "prompt_version": "1.2.0",
             "prompt_sha256": sha256_file(config.prompt_template),
             "review_prompt_sha256": sha256_file(config.review_prompt_template),
             "generation_spec_sha256": sha256_file(config.generation_spec),
