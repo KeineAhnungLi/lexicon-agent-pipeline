@@ -12,6 +12,9 @@ from lexicon_pipeline.io_utils import atomic_write_text
 from lexicon_pipeline.providers.base import AgentRunResult
 
 
+REASONING_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
+
+
 class CodexCLIProvider:
     """Adapter for a locally installed, already authenticated Codex CLI."""
 
@@ -21,6 +24,16 @@ class CodexCLIProvider:
         self.timeout = int(options.get("timeout_seconds", 1800))
         model = options.get("model")
         self.model = str(model) if model else None
+        raw_effort = options.get("reasoning_effort")
+        if raw_effort is None:
+            self.reasoning_effort = None
+        elif not isinstance(raw_effort, str) or raw_effort not in REASONING_EFFORTS:
+            allowed = ", ".join(sorted(REASONING_EFFORTS))
+            raise ConfigurationError(
+                f"provider_options.reasoning_effort must be one of: {allowed}"
+            )
+        else:
+            self.reasoning_effort = raw_effort
         raw_args = options.get("extra_args", [])
         if not isinstance(raw_args, list) or not all(isinstance(item, str) for item in raw_args):
             raise ConfigurationError("provider_options.extra_args must be a string array")
@@ -46,6 +59,10 @@ class CodexCLIProvider:
         command = [executable, "exec", "-C", str(self.working_directory)]
         if self.model:
             command.extend(["--model", self.model])
+        if self.reasoning_effort:
+            command.extend(
+                ["--config", f'model_reasoning_effort="{self.reasoning_effort}"']
+            )
         command.extend(self.extra_args)
         command.append("-")
         try:
@@ -67,6 +84,8 @@ class CodexCLIProvider:
             "returncode": completed.returncode,
             "stdout": completed.stdout,
             "stderr": completed.stderr,
+            "model": self.model,
+            "reasoning_effort": self.reasoning_effort,
         }
         atomic_write_text(
             transcript_path,
