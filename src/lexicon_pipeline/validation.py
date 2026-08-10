@@ -113,7 +113,11 @@ def validate_jsonl(
 ) -> ValidationReport:
     rows, issues = read_jsonl(path)
     expected_count = len(expected_words) if expected_words is not None else None
-    if expected_pos is not None and expected_words is not None and len(expected_pos) != len(expected_words):
+    if (
+        expected_pos is not None
+        and expected_words is not None
+        and len(expected_pos) != len(expected_words)
+    ):
         issues.append(
             ValidationIssue(
                 "EXPECTED_POS_ALIGNMENT",
