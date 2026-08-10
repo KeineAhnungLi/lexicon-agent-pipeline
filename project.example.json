@@ -1,7 +1,7 @@
 {
-  "project_name": "demo_lexicon",
+  "project_name": "production_lexicon",
   "repository_root": ".",
-  "input_file": "examples/words.demo.tsv",
+  "input_file": "local_inputs/words.tsv",
   "workspace": "workspace",
   "output_dir": "outputs/local",
   "prompt_template": "prompts/prompt_template.md",
@@ -9,16 +9,17 @@
   "generation_spec": "prompts/generation_spec.md",
   "examples": "examples/public_examples.jsonl",
   "schema_file": "schemas/lexicon_record.schema.json",
-  "batch_size": 15,
+  "batch_size": 200,
   "start_index": 1,
-  "final_filename": "demo_lexicon.ai-reviewed.jsonl",
+  "final_filename": "lexicon.ai-reviewed.jsonl",
   "expected_fields": 30,
   "provider": "codex-cli",
   "provider_options": {
     "executable": "codex",
-    "timeout_seconds": 1800,
+    "timeout_seconds": 3600,
     "max_validation_attempts": 2,
-    "model": null,
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "xhigh",
     "extra_args": ["--sandbox", "workspace-write", "--ephemeral"]
   }
 }
