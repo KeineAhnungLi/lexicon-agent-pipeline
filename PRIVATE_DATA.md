@@ -9,6 +9,11 @@ Keep these items outside version control:
 - human evaluation records containing names or other personal information;
 - proprietary dictionary text, licensed corpora, and uncertain third-party examples.
 
+Use the ignored `local_inputs/` directory for production word lists that must remain inside the
+repository root for safe pipeline execution. The standard production configuration expects
+`local_inputs/words.tsv`. Copying or converting an external source into that file must preserve
+entry text and order and must not silently normalize or deduplicate lexical content.
+
 Local workspaces belong under an ignored `workspace/`, `workspaces/`, or another ignored descendant
 of the repository. The CLI refuses to use the configuration directory itself as a workspace and
 will not replace a non-empty workspace without both `--force-reset` and `--yes`.
