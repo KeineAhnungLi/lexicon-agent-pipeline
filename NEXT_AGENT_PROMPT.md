@@ -4,6 +4,30 @@ Work in this repository as the primary orchestrator. Read `README.md`, `AGENTS.m
 `PUBLIC_DATA_POLICY.md`, `PRIVATE_DATA.md`, `docs/PIPELINE_GUIDE.md`, and the current prompt
 snapshots before changing or running production data.
 
+The standard quality-first production profile is defined in `project.example.json`: 200 entries per
+batch, `gpt-5.6-sol`, `reasoning_effort: xhigh`, and separate generation / independent-review Codex
+invocations. Do not silently substitute a cheaper model, lower reasoning effort, different batch
+size, or a single self-review call.
+
+If the repository was cloned by an outer agent from a parent directory that contains only one
+word-list file, preserve that source file. Copy or convert it into ignored
+`local_inputs/words.tsv`, with the single header `word`, preserving entry text and order exactly.
+Container-format conversion must not lowercase, lemmatize, translate, deduplicate, or otherwise
+normalize lexical content. Never commit the production input.
+
+Copy `project.example.json` to ignored `project.json`, verify that Codex CLI is installed and already
+authenticated, then use the repository CLI rather than reimplementing the pipeline:
+
+```bash
+lexicon-pipeline audit
+lexicon-pipeline prepare
+lexicon-pipeline render
+lexicon-pipeline inspect-prompt --batch 1 --show
+lexicon-pipeline run
+lexicon-pipeline merge
+lexicon-pipeline report
+```
+
 For a formal long lexicon run, create a durable goal when the host exposes goal mode and keep it
 active through every required batch, merge, and quality report. Use the manifest as the
 machine-readable source of truth.
