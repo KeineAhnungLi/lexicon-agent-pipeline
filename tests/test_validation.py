@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from lexicon_pipeline.constants import FIELD_NAMES
-from lexicon_pipeline.validation import validate_jsonl
+from lexicon_pipeline.validation import normalize_expected_pos, validate_jsonl
 
 
 def test_public_fixture_has_15_valid_ordered_rows(repository_root: Path) -> None:
@@ -60,6 +60,12 @@ def test_expected_pos_alias_is_enforced(tmp_path: Path, repository_root: Path) -
         expected_pos=[mismatch_hint],
     )
     assert any(issue.code == "EXPECTED_POS_MISMATCH" for issue in mismatch.issues)
+
+
+def test_production_source_pos_aliases_are_supported() -> None:
+    assert normalize_expected_pos("contraction") == "Kontraktion"
+    assert normalize_expected_pos("num") == "Numerale"
+    assert normalize_expected_pos("postp") == "Postposition"
 
 
 def test_global_sequence_is_enforced(repository_root: Path) -> None:
