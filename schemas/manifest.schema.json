@@ -22,12 +22,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "start", "end", "words", "state", "attempts"],
+        "required": ["id", "start", "end", "words", "expected_pos", "state", "attempts"],
         "properties": {
           "id": { "type": "integer", "minimum": 1 },
           "start": { "type": "integer", "minimum": 1 },
           "end": { "type": "integer", "minimum": 1 },
           "words": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "expected_pos": { "type": "array", "items": { "type": "string" } },
           "state": {
             "enum": ["prepared", "rendered", "generated", "reviewed", "failed"]
           },
