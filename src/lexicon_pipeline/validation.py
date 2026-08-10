@@ -14,6 +14,41 @@ from lexicon_pipeline.constants import (
     MISSING_VALUE,
 )
 
+EXPECTED_POS_ALIASES = {
+    "adj": "Adjektiv",
+    "adjective": "Adjektiv",
+    "adjektiv": "Adjektiv",
+    "adv": "Adverb",
+    "adverb": "Adverb",
+    "art": "Artikel",
+    "article": "Artikel",
+    "artikel": "Artikel",
+    "intj": "Interjektion",
+    "interjection": "Interjektion",
+    "interjektion": "Interjektion",
+    "conj": "Konjunktion",
+    "conjunction": "Konjunktion",
+    "konjunktion": "Konjunktion",
+    "n": "Nomen",
+    "noun": "Nomen",
+    "nomen": "Nomen",
+    "substantiv": "Nomen",
+    "part": "Partikel",
+    "particle": "Partikel",
+    "partikel": "Partikel",
+    "phr": "Phrase",
+    "phrase": "Phrase",
+    "prep": "Präposition",
+    "preposition": "Präposition",
+    "präposition": "Präposition",
+    "praeposition": "Präposition",
+    "pron": "Pronomen",
+    "pronoun": "Pronomen",
+    "pronomen": "Pronomen",
+    "v": "Verb",
+    "verb": "Verb",
+}
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -35,6 +70,15 @@ class ValidationReport:
         result = asdict(self)
         result["issues"] = [asdict(issue) for issue in self.issues]
         return result
+
+
+def normalize_expected_pos(value: str) -> str | None:
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    if cleaned in ALLOWED_POS:
+        return cleaned
+    return EXPECTED_POS_ALIASES.get(cleaned.casefold())
 
 
 def read_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[ValidationIssue]]:
@@ -65,9 +109,17 @@ def validate_jsonl(
     *,
     expected_words: list[str] | None = None,
     expected_first: int | None = None,
+    expected_pos: list[str] | None = None,
 ) -> ValidationReport:
     rows, issues = read_jsonl(path)
     expected_count = len(expected_words) if expected_words is not None else None
+    if expected_pos is not None and expected_words is not None and len(expected_pos) != len(expected_words):
+        issues.append(
+            ValidationIssue(
+                "EXPECTED_POS_ALIGNMENT",
+                "expected_pos hints must align one-to-one with expected_words",
+            )
+        )
     if expected_count is not None and len(rows) != expected_count:
         issues.append(
             ValidationIssue(
@@ -113,6 +165,27 @@ def validate_jsonl(
                         f"expected {expected_words[offset]!r}, found {row['word']!r}",
                         line,
                         "word",
+                    )
+                )
+        if expected_pos is not None and offset < len(expected_pos) and expected_pos[offset].strip():
+            normalized = normalize_expected_pos(expected_pos[offset])
+            if normalized is None:
+                issues.append(
+                    ValidationIssue(
+                        "EXPECTED_POS_VALUE",
+                        f"unsupported expected_pos hint {expected_pos[offset]!r}",
+                        line,
+                        "pos",
+                    )
+                )
+            elif row["pos"] != normalized:
+                issues.append(
+                    ValidationIssue(
+                        "EXPECTED_POS_MISMATCH",
+                        f"expected pos {normalized!r} from hint {expected_pos[offset]!r}, "
+                        f"found {row['pos']!r}",
+                        line,
+                        "pos",
                     )
                 )
         for field, allowed in (
