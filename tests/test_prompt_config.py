@@ -9,7 +9,7 @@ from lexicon_pipeline.config import ConfigurationError, ProjectConfig, ensure_wo
 from lexicon_pipeline.errors import StateError
 from lexicon_pipeline.io_utils import atomic_write_text, sha256_file
 from lexicon_pipeline.manifest import new_manifest
-from lexicon_pipeline.prepare import read_words
+from lexicon_pipeline.prepare import read_input_entries, read_words
 from lexicon_pipeline.rendering import render_text
 
 
@@ -27,11 +27,46 @@ def test_render_substitutes_batch_values(temp_config: ProjectConfig) -> None:
     assert "{{" not in rendered
 
 
-def test_duplicate_words_rejected(tmp_path: Path) -> None:
+def test_duplicate_words_without_pos_are_rejected(tmp_path: Path) -> None:
     path = tmp_path / "words.txt"
     path.write_text("word\neins\neins\n", encoding="utf-8")
     with pytest.raises(ConfigurationError, match="duplicate"):
         read_words(path)
+
+
+def test_homographs_with_distinct_expected_pos_are_allowed(tmp_path: Path) -> None:
+    path = tmp_path / "words.tsv"
+    path.write_text(
+        "word\texpected_pos\nüberlegen\tadj\nüberlegen\tverb\n",
+        encoding="utf-8",
+    )
+    words, positions = read_input_entries(path)
+    assert words == ["überlegen", "überlegen"]
+    assert positions == ["adj", "verb"]
+
+
+def test_duplicate_words_with_same_expected_pos_are_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "words.tsv"
+    path.write_text(
+        "word\texpected_pos\nüberlegen\tverb\nüberlegen\tverb\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigurationError, match="unique non-empty expected_pos"):
+        read_words(path)
+
+
+def test_render_includes_expected_pos_without_changing_word(temp_config: ProjectConfig) -> None:
+    manifest = new_manifest(
+        temp_config,
+        ["überlegen", "überlegen"],
+        expected_pos=["adj", "verb"],
+    )
+    rendered = render_text(
+        "{{WORD_LIST}}",
+        manifest["batches"][0],
+    )
+    assert "1. überlegen\t[expected_pos=adj]" in rendered
+    assert "2. überlegen\t[expected_pos=verb]" in rendered
 
 
 def test_missing_word_header_rejected(tmp_path: Path) -> None:
