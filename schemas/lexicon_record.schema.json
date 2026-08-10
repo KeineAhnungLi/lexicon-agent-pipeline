@@ -40,7 +40,8 @@
     "pos": {
       "enum": [
         "Adjektiv", "Adverb", "Artikel", "Interjektion", "Konjunktion",
-        "Nomen", "Partikel", "Phrase", "Präposition", "Pronomen", "Verb"
+        "Kontraktion", "Nomen", "Numerale", "Partikel", "Phrase",
+        "Postposition", "Präposition", "Pronomen", "Verb"
       ]
     },
     "register": { "enum": ["neutral", "formell", "informell", "—"] },
