@@ -1,4 +1,4 @@
-# Lexicon generation task — prompt v1.1.0
+# Lexicon generation task — prompt v1.2.0
 
 You are the generation agent for batch `{{BATCH_ID}}`, covering global rows
 `{{START_INDEX}}` through `{{END_INDEX}}`.
@@ -25,9 +25,11 @@ annotation such as `[expected_pos=adj]` or `[expected_pos=verb]`. That annotatio
 part of `word`. Reproduce only the lexical WORD in the output `word` field.
 
 When `expected_pos` is present, treat it as an authoritative disambiguation constraint for the
-intended lexical entry. Common source shorthands such as `adj`, `adv`, `noun`, `verb`, `prep`, and
-`pron` must be mapped to the canonical `pos` enum below. This permits legitimate homographs such as
-the same surface form appearing once as an adjective and once as a verb. Do not merge such rows or
+intended lexical entry. Source shorthands are normalized to the canonical German `pos` enum below.
+Important mappings include `adj` → `Adjektiv`, `adv` → `Adverb`, `noun` → `Nomen`, `verb` →
+`Verb`, `prep` → `Präposition`, `pron` → `Pronomen`, `contraction` → `Kontraktion`, `num` →
+`Numerale`, and `postp` → `Postposition`. This permits legitimate homographs and preserves source
+lexical categories instead of collapsing them into broader classes. Do not merge such rows or
 silently choose a different part of speech.
 
 ## Required 30-field order
@@ -60,15 +62,23 @@ Every object must contain these keys in exactly this order:
 - Nouns: `article` is the definite article; `plural` includes article when useful. Capitalization
   is semantically significant.
 - Adjectives/adverbs: give comparison only when idiomatic; do not force forms.
-- `case`: required case government for prepositions or fixed patterns; otherwise `—`.
+- Numerals: use `Numerale` when the entry functions as a numeral; do not coerce it to noun,
+  adjective, or article merely because the schema previously lacked the category.
+- Contractions: use `Kontraktion` for lexicalized contractions such as `wirs` = `wir + es`; explain
+  the expansion briefly in `notes` when useful.
+- Postpositions: use `Postposition`; record governed case in `case` when known. Do not rewrite the
+  category to `Präposition` merely because both are adpositional.
+- `case`: required case government for prepositions, postpositions, or fixed patterns; otherwise
+  `—`.
 - `preposition`: governed preposition or important complement; otherwise `—`.
 - `collocation`: one compact, idiomatic German collocation, or `—`.
 - `meaning`: concise Chinese meaning for the selected entry and sense; it may never be `—`.
 - `example` and `translation`: a matched German–Chinese pair. Both must be present or both `—`.
 - `level`: exactly `A1` or `A2`.
-- `pos`: exactly one of `Adjektiv`, `Adverb`, `Artikel`, `Interjektion`, `Konjunktion`, `Nomen`,
-  `Partikel`, `Phrase`, `Präposition`, `Pronomen`, `Verb`. If `expected_pos` metadata is present,
-  this field must match that intended part of speech.
+- `pos`: exactly one of `Adjektiv`, `Adverb`, `Artikel`, `Interjektion`, `Konjunktion`,
+  `Kontraktion`, `Nomen`, `Numerale`, `Partikel`, `Phrase`, `Postposition`, `Präposition`,
+  `Pronomen`, `Verb`. If `expected_pos` metadata is present, this field must match that intended
+  part of speech after canonical normalization.
 - `register`: `neutral`, `formell`, `informell`, or `—`.
 - `region`: `Deutschland`, `Österreich`, `Schweiz`, `D-A-CH`, or `—`.
 - `notes`: a brief disambiguation or usage note, or `—`.
@@ -83,6 +93,8 @@ These examples illustrate reasoning only; they are not output rows:
 - Two rows may both contain `überlegen` if one carries `[expected_pos=adj]` and the other
   `[expected_pos=verb]`. Generate two distinct entries while keeping `word` exactly `überlegen` in
   both rows.
+- `wirs` with `[expected_pos=contraction]` must retain `word` exactly `wirs` and use
+  `pos = Kontraktion`; the contraction may be explained as `wir + es` in `notes`.
 - `sich ausruhen` is reflexive and separable; both properties must be represented coherently.
 - `(Rad-)Tour` contains an optional element. Preserve the exact `word` while choosing a useful
   canonical `base_form` and explaining the notation in `notes`.
