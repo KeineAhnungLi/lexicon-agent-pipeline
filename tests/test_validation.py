@@ -40,6 +40,28 @@ def test_word_identity_is_enforced(repository_root: Path) -> None:
     assert any(issue.code == "WORD_MISMATCH" for issue in report.issues)
 
 
+def test_expected_pos_alias_is_enforced(tmp_path: Path, repository_root: Path) -> None:
+    source = repository_root / "examples" / "public_examples.jsonl"
+    row = json.loads(source.read_text(encoding="utf-8").splitlines()[0])
+    path = tmp_path / "pos.jsonl"
+    path.write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+    matching = validate_jsonl(
+        path,
+        expected_words=[str(row["word"])],
+        expected_first=int(row["first"]),
+        expected_pos=[str(row["pos"])],
+    )
+    assert matching.valid
+    mismatch_hint = "verb" if row["pos"] != "Verb" else "adj"
+    mismatch = validate_jsonl(
+        path,
+        expected_words=[str(row["word"])],
+        expected_first=int(row["first"]),
+        expected_pos=[mismatch_hint],
+    )
+    assert any(issue.code == "EXPECTED_POS_MISMATCH" for issue in mismatch.issues)
+
+
 def test_global_sequence_is_enforced(repository_root: Path) -> None:
     path = repository_root / "examples" / "public_examples.jsonl"
     report = validate_jsonl(path, expected_first=2)
