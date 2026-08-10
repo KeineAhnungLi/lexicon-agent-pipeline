@@ -9,16 +9,26 @@ from lexicon_pipeline.config import ProjectConfig
 from lexicon_pipeline.io_utils import atomic_write_json, load_json, sha256_file
 
 
-def new_manifest(config: ProjectConfig, words: list[str]) -> dict[str, Any]:
+def new_manifest(
+    config: ProjectConfig,
+    words: list[str],
+    *,
+    expected_pos: list[str] | None = None,
+) -> dict[str, Any]:
+    if expected_pos is not None and len(expected_pos) != len(words):
+        raise ValueError("expected_pos must align one-to-one with words")
+    positions = expected_pos if expected_pos is not None else [""] * len(words)
     batches: list[dict[str, Any]] = []
     for number, offset in enumerate(range(0, len(words), config.batch_size), start=1):
         batch_words = words[offset : offset + config.batch_size]
+        batch_pos = positions[offset : offset + config.batch_size]
         batches.append(
             {
                 "id": number,
                 "start": config.start_index + offset,
                 "end": config.start_index + offset + len(batch_words) - 1,
                 "words": batch_words,
+                "expected_pos": batch_pos,
                 "state": "prepared",
                 "attempts": 0,
                 "last_error": None,
