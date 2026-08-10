@@ -11,17 +11,29 @@ example expects `local_inputs/words.tsv`, uses 200 entries per batch, and config
 `gpt-5.6-sol` plus `reasoning_effort: xhigh`. Change those values deliberately when running another
 model or quality/cost profile.
 
-Input is UTF-8 TSV. Its first row must be the single header `word`; subsequent first-column values
-are preserved exactly after line-boundary trimming. Empty and duplicate entries are rejected rather
-than silently normalized. If an outer agent converts another tabular format into this TSV contract,
-it must preserve entry text and order and must not lowercase, lemmatize, translate, or deduplicate.
+Input is UTF-8 TSV. Its first column must be `word`; an optional `expected_pos` column may be used as
+a disambiguation constraint. First-column values are preserved after line-boundary trimming. Empty
+entries are rejected. Exact duplicate surface forms are rejected unless every occurrence has a
+non-empty, unique `expected_pos`, for example:
+
+```text
+word	expected_pos
+überlegen	adj
+überlegen	verb
+```
+
+The rendered `[expected_pos=...]` annotation is metadata, not part of `word`; validation requires
+the final canonical `pos` to match recognized hints. If an outer agent converts another tabular
+format into this TSV contract, it must preserve lexical entry text and order and must not lowercase,
+lemmatize, translate, or deduplicate. It may preserve a source POS column as `expected_pos` so that
+legitimate homographs remain distinct rows.
 
 ## Audit, prepare, render
 
-`audit` checks that configured files exist. `prepare` reads UTF-8 (including BOM) input, rejects
-empty or duplicate entries, snapshots it, and creates batches. It refuses to replace non-empty
-state unless the caller passes `--force-reset --yes`. `render` substitutes only batch identifiers,
-indices, and words into the versioned prompt.
+`audit` checks that configured files exist. `prepare` reads UTF-8 (including BOM) input, validates
+homograph identity rules, snapshots it, and creates batches. It refuses to replace non-empty state
+unless the caller passes `--force-reset --yes`. `render` substitutes batch identifiers, indices,
+words, and optional POS hints into the versioned prompt.
 
 Inspect the first rendered prompt before a paid run:
 
