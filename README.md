@@ -71,21 +71,37 @@ mkdocs build --strict
 
 ## Formal Codex CLI run
 
-Copy `project.example.json` to the ignored local file `project.json`, point `input_file` at data you
-are authorized to use, and keep `workspace` inside the repository:
+The production example is intentionally quality-first: **200 entries per batch**, **GPT-5.6 Sol**,
+**xhigh reasoning effort**, and a 3600-second provider timeout. Generation and review are separate
+`codex exec` processes and therefore receive the same explicit model / reasoning configuration
+independently.
+
+Production word lists belong in ignored `local_inputs/`; do not commit them. Prepare a UTF-8 TSV
+whose first row is the single header `word`, then:
 
 ```bash
+mkdir -p local_inputs
+# Put the authorized input at local_inputs/words.tsv
+cp project.example.json project.json
+python -m venv .venv
+# Activate the environment for your shell, then:
+python -m pip install -e ".[dev,docs]"
 lexicon-pipeline audit
 lexicon-pipeline prepare
 lexicon-pipeline render
+lexicon-pipeline inspect-prompt --batch 1 --show
 lexicon-pipeline run
 lexicon-pipeline merge
 lexicon-pipeline report
 ```
 
-`CodexCLIProvider` launches generation and review as separate `codex exec` processes. Authentication
-is deliberately not embedded in this repository or Docker image. Inspect the locally installed
-CLI’s help before adding provider `extra_args`; unsafe sandbox-bypass flags are not defaults.
+`project.example.json` contains the production defaults. `provider_options.reasoning_effort` is a
+first-class option and is passed to Codex as `model_reasoning_effort`; there is no need to hide it
+inside `extra_args`.
+
+Authentication is deliberately not embedded in this repository or Docker image. The host user must
+already have an authenticated Codex CLI. Inspect the locally installed CLI’s help before adding
+provider `extra_args`; unsafe sandbox-bypass flags are not defaults.
 
 Useful recovery modes:
 
@@ -99,6 +115,18 @@ lexicon-pipeline inspect-prompt --json
 
 Generated-only batches resume at review. Valid reviewed batches are skipped. A failed review never
 becomes mergeable.
+
+### Handoff from a directory containing only a word-list file
+
+A fresh coding agent can clone this repository into a child directory, copy/convert the sole input
+file into `local_inputs/words.tsv`, copy `project.example.json` to ignored `project.json`, and then
+run the formal sequence above. Conversion may change only the container format: preserve entry
+text and order, do not lowercase, lemmatize, translate, deduplicate, or otherwise normalize semantic
+content before the pipeline sees it.
+
+This makes the repository the source of truth for prompts, schema, provider configuration,
+validation, recovery, review isolation, merge policy, and reporting. The outer coding agent should
+orchestrate the run rather than reimplement the lexicon-generation method in its own prompt.
 
 ## Motivation and boundaries
 
