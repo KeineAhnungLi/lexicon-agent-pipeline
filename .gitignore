@@ -12,9 +12,10 @@ site/
 .coverage
 htmlcov/
 
-# Local configuration and generated workspaces
+# Local configuration, private inputs, and generated workspaces
 project.json
 *.local.json
+local_inputs/
 workspace/*
 !workspace/.gitkeep
 workspaces/
