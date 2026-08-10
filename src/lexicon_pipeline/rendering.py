@@ -17,9 +17,17 @@ def render_text(
     examples: str = "",
     require_content_placeholders: bool = False,
 ) -> str:
-    words = "\n".join(f"{index}. {word}" for index, word in enumerate(
-        batch["words"], start=int(batch["start"])
-    ))
+    positions = batch.get("expected_pos", [""] * len(batch["words"]))
+    words = "\n".join(
+        (
+            f"{index}. {word}"
+            + (f"\t[expected_pos={pos}]" if str(pos).strip() else "")
+        )
+        for index, (word, pos) in enumerate(
+            zip(batch["words"], positions, strict=True),
+            start=int(batch["start"]),
+        )
+    )
     values = {
         "{{BATCH_ID}}": batch_stem(int(batch["id"])),
         "{{START_INDEX}}": str(batch["start"]),
