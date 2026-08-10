@@ -50,11 +50,20 @@ def _record_provenance(
     )
 
 
+def _expected_pos(batch: dict[str, Any]) -> list[str] | None:
+    raw = batch.get("expected_pos")
+    if not isinstance(raw, list):
+        return None
+    values = [str(value) for value in raw]
+    return values if any(value.strip() for value in values) else None
+
+
 def _validate_or_raise(path: Path, batch: dict[str, Any]) -> None:
     report = validate_jsonl(
         path,
         expected_words=[str(word) for word in batch["words"]],
         expected_first=int(batch["start"]),
+        expected_pos=_expected_pos(batch),
     )
     if not report.valid:
         messages = "; ".join(f"{item.code}: {item.message}" for item in report.issues[:8])
