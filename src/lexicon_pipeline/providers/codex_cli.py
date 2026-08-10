@@ -11,7 +11,6 @@ from lexicon_pipeline.errors import ConfigurationError, ProviderError
 from lexicon_pipeline.io_utils import atomic_write_text
 from lexicon_pipeline.providers.base import AgentRunResult
 
-
 REASONING_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
 
 
