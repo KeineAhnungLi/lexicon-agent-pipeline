@@ -9,6 +9,12 @@ Keep these items outside version control:
 - human evaluation records containing names or other personal information;
 - proprietary dictionary text, licensed corpora, and uncertain third-party examples.
 
+The public 29-field examples and MockProvider fixtures must be newly authored synthetic records.
+Do not transform production rows into "anonymous" public samples. The simple workflow does not
+change this boundary: its generated artifacts are production outputs and remain private. Exact
+provider token counts may be stored only in ignored local reports; if unavailable, record that fact
+rather than inventing a value.
+
 Use the ignored `local_inputs/` directory for production word lists that must remain inside the
 repository root for safe pipeline execution. The standard production configuration expects
 `local_inputs/words.tsv`. Copying or converting an external source into that file must preserve

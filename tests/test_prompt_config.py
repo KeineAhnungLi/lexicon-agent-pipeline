@@ -107,12 +107,21 @@ def test_workspace_must_be_descendant(temp_config: ProjectConfig) -> None:
         ensure_workspace_is_safe(unsafe)
 
 
-def test_schema_is_valid_json(repository_root: Path) -> None:
-    schema = json.loads(
+def test_agent_and_final_schema_contracts(repository_root: Path) -> None:
+    agent_schema = json.loads(
+        (repository_root / "schemas" / "lexicon_agent_record.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    final_schema = json.loads(
         (repository_root / "schemas" / "lexicon_record.schema.json").read_text(encoding="utf-8")
     )
-    assert len(schema["required"]) == 30
-    assert schema["additionalProperties"] is False
+    assert len(agent_schema["required"]) == 29
+    assert "meaning_merged" not in agent_schema["required"]
+    assert len(final_schema["required"]) == 30
+    assert final_schema["required"][8] == "meaning_merged"
+    assert agent_schema["additionalProperties"] is False
+    assert final_schema["additionalProperties"] is False
 
 
 def test_batching_respects_start_index(temp_config: ProjectConfig) -> None:

@@ -8,10 +8,12 @@
   "review_prompt_template": "prompts/review_prompt_template.md",
   "generation_spec": "prompts/generation_spec.md",
   "examples": "examples/public_examples.jsonl",
+  "agent_schema_file": "schemas/lexicon_agent_record.schema.json",
   "schema_file": "schemas/lexicon_record.schema.json",
   "batch_size": 200,
   "start_index": 1,
   "final_filename": "lexicon.ai-reviewed.jsonl",
+  "agent_expected_fields": 29,
   "expected_fields": 30,
   "provider": "codex-cli",
   "provider_options": {

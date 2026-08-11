@@ -31,6 +31,7 @@ def determine_next_action(config: ProjectConfig, batch: dict[str, Any]) -> NextA
         expected_words=words,
         expected_first=start,
         expected_pos=expected_pos,
+        schema="agent",
     ).valid:
         return "complete"
     if generated.is_file() and validate_jsonl(
@@ -38,6 +39,7 @@ def determine_next_action(config: ProjectConfig, batch: dict[str, Any]) -> NextA
         expected_words=words,
         expected_first=start,
         expected_pos=expected_pos,
+        schema="agent",
     ).valid:
         return "review"
     return "generate"

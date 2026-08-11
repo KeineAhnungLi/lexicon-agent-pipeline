@@ -1,25 +1,14 @@
 # Architecture
 
+The orchestrator owns deterministic work: input preparation, batching, prompt rendering, provider
+launch, stage-aware validation, provenance, recovery, merging, final derivation, and reporting.
+Language agents own spelling, grammar, meanings, and collocations.
+
 ```text
-ProjectConfig
-  ├─ prepare → manifest + immutable input snapshot
-  ├─ render → one generation prompt per batch
-  └─ orchestrate
-       ├─ AgentProvider.run(generation) → generated JSONL
-       ├─ validator gate
-       ├─ AgentProvider.run(review) → reviewed JSONL
-       ├─ validator gate + provenance
-       └─ reviewed-only merge → report
+simple: input -> generation(29) -> validate -> merge generated -> derive -> final(30)
+full:   input -> generation(29) -> validate -> independent review(29) -> validate
+        -> merge reviewed -> derive -> final(30)
 ```
 
-`MockProvider` copies labeled synthetic fixtures for tests and demonstrations. `CodexCLIProvider`
-invokes the host CLI. `openai-api` and `anthropic-api` are explicit unimplemented extension names;
-selecting either produces an error rather than pretending to work.
-
-`manifest.json` is the durable state machine: prepared, rendered, generated, reviewed, or failed.
-Artifact validity is rechecked during recovery, so a stale state string cannot make a corrupt file
-mergeable. Writes that establish durable artifacts use temporary files followed by an atomic
-replacement.
-
-The current record schema is fixed. New language/schema profiles should introduce separately
-versioned schemas, prompts, validators, and migrations rather than changing v1 semantics silently.
+The derivation inserts `meaning_merged` after `correct_option` without modifying any agent-authored
+field. Manifest v2 binds a workspace to contract 2.0.0 and separate agent/final schema hashes.

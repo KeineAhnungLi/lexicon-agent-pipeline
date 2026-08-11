@@ -1,16 +1,16 @@
-# Record schema
+# Record contracts
 
-The reference record has exactly 30 ordered keys. JSON objects are unordered by the JSON standard,
-but this project deliberately treats serialized key order as a reproducibility contract.
+Contract 2.0.0 has two serialized record shapes.
 
-`first` is the one-based global row number and `word` must reproduce the input line exactly.
-Inapplicable values use the literal em dash `—`; null and empty strings are rejected. `meaning`
-cannot be missing. `example` and `translation` must either both exist or both use the missing
-marker.
+The agent record contains exactly 29 ordered keys: eight identity/grammar fields followed by seven
+`meaningN`, `collocationN`, `collocationN_translation` groups. Generation and review artifacts both
+use `schemas/lexicon_agent_record.schema.json`. They contain neither `meaning_merged` nor examples.
 
-Allowed enum values are defined in both `schemas/lexicon_record.schema.json` and the mechanical
-validator. JSON Schema checks shape and values; pipeline validation additionally checks source
-order, global indices, row count, and pair invariants.
+The final record contains exactly 30 ordered keys. `meaning_merged` appears immediately after
+`correct_option` and equals the full-width-semicolon join of every non-`—` meaning in numeric order.
+The merger derives it; agents never author it. Final files use `schemas/lexicon_record.schema.json`.
 
-The schema describes a German–Chinese A1/A2 profile. It is not presented as a universal multilingual
-ontology.
+JSON Schema checks shape and values but cannot enforce serialized key order or a derived equality.
+The Python validator enforces those invariants. Empty strings and null are rejected; use the literal
+em dash `—`. `meaning1` is mandatory, and every collocation/translation pair is jointly present or
+jointly missing.

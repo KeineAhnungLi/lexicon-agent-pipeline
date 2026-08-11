@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from collections.abc import Mapping
@@ -12,6 +13,21 @@ from lexicon_pipeline.io_utils import atomic_write_text
 from lexicon_pipeline.providers.base import AgentRunResult
 
 REASONING_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
+TOKEN_USAGE_PATTERN = re.compile(r"tokens used\s+([0-9][0-9,]*)", re.IGNORECASE)
+
+
+def parse_tokens_used(*texts: str) -> int | None:
+    """Return the final exact Codex token count, without estimating missing usage."""
+    matches: list[str] = []
+    for value in texts:
+        matches.extend(TOKEN_USAGE_PATTERN.findall(value))
+    return int(matches[-1].replace(",", "")) if matches else None
+
+
+def _captured_text(value: str | bytes | None) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value or ""
 
 
 class CodexCLIProvider:
@@ -74,8 +90,36 @@ class CodexCLIProvider:
                 timeout=self.timeout,
                 check=False,
             )
-        except (OSError, subprocess.TimeoutExpired) as exc:
+        except subprocess.TimeoutExpired as exc:
+            stdout = _captured_text(exc.stdout)
+            stderr = _captured_text(exc.stderr)
+            atomic_write_text(
+                transcript_path,
+                json.dumps(
+                    {
+                        "provider": "codex-cli",
+                        "stage": stage,
+                        "command": [Path(command[0]).name, *command[1:]],
+                        "returncode": None,
+                        "timed_out": True,
+                        "timeout_seconds": self.timeout,
+                        "stdout": stdout,
+                        "stderr": stderr,
+                        "model": self.model,
+                        "reasoning_effort": self.reasoning_effort,
+                        "tokens_used": parse_tokens_used(stdout, stderr),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+            )
+            raise ProviderError(
+                f"Codex {stage} timed out; see partial transcript {transcript_path}"
+            ) from exc
+        except OSError as exc:
             raise ProviderError(f"Codex {stage} invocation failed: {exc}") from exc
+        tokens_used = parse_tokens_used(completed.stdout, completed.stderr)
         transcript = {
             "provider": "codex-cli",
             "stage": stage,
@@ -85,6 +129,7 @@ class CodexCLIProvider:
             "stderr": completed.stderr,
             "model": self.model,
             "reasoning_effort": self.reasoning_effort,
+            "tokens_used": tokens_used,
         }
         atomic_write_text(
             transcript_path,
@@ -105,4 +150,6 @@ class CodexCLIProvider:
             transcript_path=transcript_path,
             command=tuple(command),
             model=self.model,
+            reasoning_effort=self.reasoning_effort,
+            tokens_used=tokens_used,
         )

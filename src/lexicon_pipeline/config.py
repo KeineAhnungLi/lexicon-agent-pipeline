@@ -21,12 +21,14 @@ class ProjectConfig:
     review_prompt_template: Path
     generation_spec: Path
     examples_file: Path
+    agent_schema_file: Path
     schema_file: Path
     batch_size: int
     start_index: int
     final_filename: str
     provider: str
     provider_options: Mapping[str, Any]
+    agent_expected_fields: int = 29
     expected_fields: int = 30
 
     @property
@@ -82,6 +84,7 @@ def load_config(
         "review_prompt_template",
         "generation_spec",
         "examples",
+        "agent_schema_file",
         "schema_file",
     )
     missing = [name for name in required if not isinstance(data.get(name), str)]
@@ -96,9 +99,12 @@ def load_config(
     start_index = int(data.get("start_index", 1))
     if start_index < 1:
         raise ConfigurationError("start_index must be positive")
+    agent_expected_fields = int(data.get("agent_expected_fields", 29))
+    if agent_expected_fields != 29:
+        raise ConfigurationError("agent artifacts require exactly 29 fields")
     expected_fields = int(data.get("expected_fields", 30))
     if expected_fields != 30:
-        raise ConfigurationError("this schema profile requires exactly 30 fields")
+        raise ConfigurationError("final artifacts require exactly 30 fields")
     provider = provider_override or str(data.get("provider", "mock"))
     options = _mapping(data.get("provider_options", {}), "provider_options")
     repository_root = _resolve(base, str(data.get("repository_root", ".")))
@@ -118,12 +124,14 @@ def load_config(
         review_prompt_template=_resolve(base, str(data["review_prompt_template"])),
         generation_spec=_resolve(base, str(data["generation_spec"])),
         examples_file=_resolve(base, str(data["examples"])),
+        agent_schema_file=_resolve(base, str(data["agent_schema_file"])),
         schema_file=_resolve(base, str(data["schema_file"])),
         batch_size=batch_size,
         start_index=start_index,
         final_filename=str(data.get("final_filename", "lexicon.ai-reviewed.jsonl")),
         provider=provider,
         provider_options=options,
+        agent_expected_fields=agent_expected_fields,
         expected_fields=expected_fields,
     )
 
@@ -151,6 +159,7 @@ def ensure_workspace_is_safe(config: ProjectConfig) -> None:
         config.review_prompt_template,
         config.generation_spec,
         config.examples_file,
+        config.agent_schema_file,
         config.schema_file,
     )
     escaped = [

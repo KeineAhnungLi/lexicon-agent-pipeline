@@ -17,7 +17,9 @@ def test_all_schemas_are_well_formed(repository_root: Path) -> None:
 
 def test_public_examples_pass_json_schema(repository_root: Path) -> None:
     schema = json.loads(
-        (repository_root / "schemas" / "lexicon_record.schema.json").read_text(encoding="utf-8")
+        (repository_root / "schemas" / "lexicon_agent_record.schema.json").read_text(
+            encoding="utf-8"
+        )
     )
     validator = Draft202012Validator(schema)
     rows = (
@@ -41,7 +43,16 @@ def test_generated_manifest_passes_schema(
 
 
 def test_prompt_snapshot_hashes_match(repository_root: Path) -> None:
-    version = repository_root / "prompts" / "versions" / "v1.0.0"
+    version = repository_root / "prompts" / "versions" / "v2.0.0"
     manifest = json.loads((version / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == "2.0.0"
+    assert set(manifest["files"]) == {
+        "prompt_template.md",
+        "review_prompt_template.md",
+        "generation_spec.md",
+    }
     for filename, digest in manifest["files"].items():
         assert sha256_file(version / filename) == digest
+        assert (version / filename).read_bytes() == (
+            repository_root / "prompts" / filename
+        ).read_bytes()

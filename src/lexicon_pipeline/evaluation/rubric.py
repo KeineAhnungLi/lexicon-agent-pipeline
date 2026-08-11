@@ -13,11 +13,11 @@ class RubricCriterion:
 
 DEFAULT_RUBRIC: tuple[RubricCriterion, ...] = (
     RubricCriterion("meaning", "Chinese meaning matches the selected German sense."),
-    RubricCriterion("grammar", "Forms and grammatical features are accurate and coherent."),
-    RubricCriterion("example", "Example is idiomatic and supports the selected sense."),
-    RubricCriterion("translation", "Translation naturally and faithfully matches the example."),
+    RubricCriterion("word_form", "Spelling, inflection, change, and pronunciation are accurate."),
+    RubricCriterion("grammar", "Class and correct-option grammar are accurate and coherent."),
+    RubricCriterion("collocation", "German collocations are idiomatic and support each sense."),
     RubricCriterion(
-        "metadata",
-        "Level, part of speech, register, region, and notes are appropriate.",
+        "translation",
+        "Each Chinese collocation translation naturally and faithfully matches its German text.",
     ),
 )

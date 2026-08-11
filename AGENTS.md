@@ -1,31 +1,29 @@
 # Agent operating contract
 
-This repository separates orchestration from semantic authorship.
+The orchestrator and language agents have separate responsibilities.
 
-## Required execution model
+- A generation agent judges every entry and writes the complete 29-field agent record.
+- In `full` mode, a distinct review invocation independently corrects every draft and writes a
+  complete 29-field reviewed record.
+- In `simple` mode, a mechanically valid generated artifact is the merge source.
+- The orchestrator prepares batches, renders prompts, invokes providers, validates artifacts,
+  records provenance, recovers state, merges, derives `meaning_merged`, and reports results.
+- The sole permitted semantic-looking derivation is exact: insert `meaning_merged` after
+  `correct_option` as `；`.join of non-`—` `meaning1` through `meaning7`. It must not summarize,
+  translate, deduplicate, or otherwise alter meanings.
+- No agent artifact contains `meaning_merged` or example/sentence fields.
+- Neither agents nor scripts may fill linguistic content using suffix guesses, translation tables,
+  neighboring records, or templates.
 
-- The orchestrator prepares batches, renders prompts, launches providers, validates artifacts,
-  records provenance, resumes state, merges reviewed outputs, and reports results.
-- A generation agent reads each rendered batch prompt and authors every record using linguistic
-  judgment.
-- A separate review-agent invocation reads the prompt and generated draft, checks every record
-  independently, and writes the complete reviewed batch.
-- The orchestrator must never fill meanings, translations, examples, grammatical forms, or notes
-  through suffix guesses, lookup tables, templates, or a “remaining batches” generator.
-- A batch is mergeable only after the reviewed artifact passes mechanical validation.
+For the quality-first profile use GPT-5.6 Sol with `xhigh` reasoning and 200 entries per batch.
+Never invent token usage when a provider does not expose an exact count.
 
-When the host supports persistent goals, create a goal for a long production run and keep it active
-until every required batch, merge, and report is complete. Goal state is a coordination aid, not a
-substitute for the manifest.
+For a long production run, the supervising Codex session must create and keep an explicit goal,
+then delegate bounded batches to isolated Codex subagents/provider invocations. Do not have the
+supervisor synthesize thousands of rows in one turn. In full mode, generation and review for a
+batch must be separate invocations; the reviewer reads the draft but must independently correct
+it. Validate and persist each batch before dispatching the next one so the run remains resumable.
 
-For large formal runs, the primary agent may delegate bounded generation or audit work to Codex
-subagents when the execution environment supports them. Each delegate must receive the full
-rendered prompt, operate on disjoint batch files, and return artifacts for the same independent
-review and validator gates. Never delegate by asking an agent to invent a rule-based shortcut.
-
-## Public repository boundary
-
-Do not add private word lists, source spreadsheets, historical full outputs, raw transcripts,
-credentials, machine-specific absolute paths, or material with uncertain redistribution rights.
-Use only the original synthetic demo fixtures included here. Read `PUBLIC_DATA_POLICY.md` and
-`PRIVATE_DATA.md` before preparing a release.
+Do not add private word lists, spreadsheets, production outputs, raw transcripts, credentials,
+machine-specific paths, licensed corpora, or uncertain third-party examples. Public fixtures must
+be newly authored synthetic data covered by `DATA_LICENSE`.

@@ -11,12 +11,12 @@ from lexicon_pipeline.audit import audit_public_release, write_audit_report
 from lexicon_pipeline.config import ProjectConfig, load_config
 from lexicon_pipeline.errors import PipelineError
 from lexicon_pipeline.manifest import find_batch, read_manifest
-from lexicon_pipeline.merging import merge_reviewed
+from lexicon_pipeline.merging import merge_batches
 from lexicon_pipeline.orchestration import RunMode, run_pipeline
 from lexicon_pipeline.prepare import prepare_workspace
 from lexicon_pipeline.rendering import render_prompts
 from lexicon_pipeline.reporting import build_quality_report
-from lexicon_pipeline.validation import validate_jsonl
+from lexicon_pipeline.validation import ArtifactSchema, validate_jsonl
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -48,13 +48,17 @@ def _parser() -> argparse.ArgumentParser:
     validate = sub.add_parser("validate", help="mechanically validate an artifact")
     validate.add_argument("--path", type=Path)
     validate.add_argument("--batch", type=int)
-    validate.add_argument("--stage", choices=("generated", "reviewed"), default="reviewed")
+    validate.add_argument(
+        "--stage", choices=("generated", "reviewed", "final"), default="reviewed"
+    )
 
-    merge = sub.add_parser("merge", help="merge valid reviewed batches only")
+    merge = sub.add_parser("merge", help="merge valid agent batches and derive final records")
     merge.add_argument("--output", type=Path)
     merge.add_argument("--force-output", action="store_true")
+    merge.add_argument("--stage", choices=("generated", "reviewed"), default="reviewed")
 
-    sub.add_parser("report", help="write JSON and Markdown quality reports")
+    report = sub.add_parser("report", help="write JSON and Markdown quality reports")
+    report.add_argument("--stage", choices=("generated", "reviewed"), default="reviewed")
 
     demo = sub.add_parser("demo", help="run the deterministic public demo")
     demo.add_argument("--reset", action="store_true")
@@ -81,7 +85,7 @@ def _parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--workspace", type=Path, default=argparse.SUPPRESS)
         command_parser.add_argument("--provider", default=argparse.SUPPRESS)
         command_parser.add_argument("--batch-size", type=int, default=argparse.SUPPRESS)
-    for command_parser in (sub.choices["render"], sub.choices["report"]):
+    for command_parser in (sub.choices["render"], report):
         command_parser.add_argument("--config", type=Path, default=argparse.SUPPRESS)
         command_parser.add_argument("--workspace", type=Path, default=argparse.SUPPRESS)
         command_parser.add_argument("--provider", default=argparse.SUPPRESS)
@@ -111,6 +115,7 @@ def _cmd_audit(config: ProjectConfig, as_json: bool) -> int:
         "words_file": config.words_file.is_file(),
         "prompt_template": config.prompt_template.is_file(),
         "review_prompt_template": config.review_prompt_template.is_file(),
+        "agent_schema_file": config.agent_schema_file.is_file(),
         "schema_file": config.schema_file.is_file(),
         "workspace": str(config.workspace),
         "provider": config.provider,
@@ -119,7 +124,11 @@ def _cmd_audit(config: ProjectConfig, as_json: bool) -> int:
         f"{key}: {value}" for key, value in checks.items()
     ))
     return 0 if all(checks[key] for key in (
-        "words_file", "prompt_template", "review_prompt_template", "schema_file"
+        "words_file",
+        "prompt_template",
+        "review_prompt_template",
+        "agent_schema_file",
+        "schema_file",
     )) else 1
 
 
@@ -128,6 +137,8 @@ def _cmd_validate(config: ProjectConfig, args: argparse.Namespace) -> int:
     expected_words: list[str] | None = None
     expected_first: int | None = None
     if args.batch is not None:
+        if args.stage == "final":
+            raise PipelineError("final validation accepts --path, not --batch")
         manifest = read_manifest(config.manifest_path)
         batch = find_batch(manifest, args.batch)
         expected_words = [str(word) for word in batch["words"]]
@@ -136,8 +147,12 @@ def _cmd_validate(config: ProjectConfig, args: argparse.Namespace) -> int:
             path = config.outputs_dir / f"batch_{args.batch:02d}.{args.stage}.jsonl"
     if path is None:
         raise PipelineError("validate requires --path or --batch")
+    schema: ArtifactSchema = "final" if args.stage == "final" else "agent"
     report = validate_jsonl(
-        path, expected_words=expected_words, expected_first=expected_first
+        path,
+        expected_words=expected_words,
+        expected_first=expected_first,
+        schema=schema,
     )
     print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
     return 0 if report.valid else 1
@@ -158,7 +173,7 @@ def _inspect_prompt(config: ProjectConfig, as_json: bool) -> int:
         if marker in text
     ]
     data = {
-        "version": "1.0.0",
+        "version": "2.0.0",
         "sha256": sha256_file(config.prompt_template),
         "placeholders": markers,
         "path": str(config.prompt_template),
@@ -215,13 +230,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "validate":
             return _cmd_validate(config, args)
         if args.command == "merge":
-            path, count = merge_reviewed(
-                config, args.output, overwrite=args.force_output
+            path, count = merge_batches(
+                config, args.output, stage=args.stage, overwrite=args.force_output
             )
-            print(f"merged {count} reviewed records into {path}")
+            print(f"merged {count} {args.stage} records into {path}")
             return 0
         if args.command == "report":
-            json_path, md_path, data = build_quality_report(config)
+            json_path, md_path, data = build_quality_report(config, stage=args.stage)
             status = "PASS" if data["mechanical_validation_passed"] else "FAIL"
             print(f"{status}: {json_path} / {md_path}")
             return 0 if data["mechanical_validation_passed"] else 1
@@ -229,7 +244,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             prepare_workspace(config, force_reset=args.reset, confirmed=args.reset)
             render_prompts(config)
             run_pipeline(config)
-            merged, count = merge_reviewed(config, overwrite=args.reset)
+            merged, count = merge_batches(config, overwrite=args.reset)
             build_quality_report(config)
             print(f"synthetic demo PASS: {count} records in {merged}")
             return 0

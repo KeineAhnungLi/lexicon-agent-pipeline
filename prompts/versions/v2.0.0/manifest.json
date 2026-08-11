@@ -1,0 +1,10 @@
+{
+  "version": "2.0.0",
+  "contract_version": "2.0.0",
+  "profile": "German Classics German–Chinese lexicon",
+  "files": {
+    "prompt_template.md": "2f7be2bf2621cfe327bdcfd761d05ce4231a84976f6892a2d631c86803d7e8b1",
+    "review_prompt_template.md": "1d2f84baad544e487f8addcc916ec9011b033ca99c6c5c9c18e9f11a13d01532",
+    "generation_spec.md": "6d82b48035e429aa618db050b396908d3b85dc510e788205bd05cac22329f57b"
+  }
+}
