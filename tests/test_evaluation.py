@@ -29,5 +29,5 @@ def test_sampling_rejects_negative_size() -> None:
 
 def test_default_rubric_has_no_results() -> None:
     assert {item.name for item in DEFAULT_RUBRIC} == {
-        "meaning", "grammar", "example", "translation", "metadata"
+        "meaning", "word_form", "grammar", "collocation", "translation"
     }

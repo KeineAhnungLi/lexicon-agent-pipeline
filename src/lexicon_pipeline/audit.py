@@ -55,6 +55,7 @@ REQUIRED_FILES = (
     "LICENSE",
     "DATA_LICENSE",
     "project.example.json",
+    "schemas/lexicon_agent_record.schema.json",
     "schemas/lexicon_record.schema.json",
     "examples/words.demo.tsv",
     "tests/test_demo.py",
@@ -175,14 +176,16 @@ def audit_public_release(root: Path) -> AuditResult:
     if examples.is_file() and words_file.is_file():
         words = words_file.read_text(encoding="utf-8-sig").splitlines()
         demo_words = words[1:] if words and words[0] == "word" else []
-        report = validate_jsonl(examples, expected_words=demo_words, expected_first=1)
+        report = validate_jsonl(
+            examples, expected_words=demo_words, expected_first=1, schema="agent"
+        )
         if not report.valid or not 15 <= report.row_count <= 30:
             findings.append(
                 AuditFinding(
                     "error",
                     "PUBLIC_EXAMPLES",
                     examples.relative_to(root).as_posix(),
-                    "public examples must be 15–30 valid records aligned to demo input",
+                    "public examples must be 15–30 valid agent records aligned to demo input",
                 )
             )
     prompt = root / "prompts" / "prompt_template.md"
@@ -201,7 +204,7 @@ def audit_public_release(root: Path) -> AuditResult:
     readme = root / "README.md"
     if readme.is_file():
         readme_text = readme.read_text(encoding="utf-8").lower()
-        for phrase in ("4,812", "mockprovider", "does not", "independent"):
+        for phrase in ("private production", "mockprovider", "does not", "independent"):
             if phrase.lower() not in readme_text:
                 findings.append(
                     AuditFinding("error", "README_BOUNDARY", "README.md", f"missing {phrase!r}")

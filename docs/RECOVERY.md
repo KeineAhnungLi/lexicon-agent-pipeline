@@ -1,13 +1,14 @@
 # Recovery and idempotency
 
-The manifest and validated artifacts jointly determine recovery. State labels alone are never
-trusted. A valid reviewed batch is idempotently skipped. A valid generated-only batch proceeds
-directly to review. Invalid artifacts are not merged.
+Manifest state alone is never trusted. Recovery validates artifacts with the 29-field agent
+contract. In full mode, a valid reviewed artifact is complete and a valid generated artifact resumes
+at review. In simple mode, a valid generated artifact is complete enough to merge. Invalid files are
+not mergeable.
 
-Output and report files use atomic replacement where they establish durable state. The manifest is
-saved after each completed stage. A process interruption can therefore require replaying at most
-the current unfinished provider stage.
+Manifest v2 records `contract_version`, `agent_schema_hash`, and `final_schema_hash`. A manifest v1
+belongs to the pre-2.0 contract and must be replaced by running `prepare`; old artifacts are not
+silently resumed.
 
-Provider calls themselves are not assumed idempotent: a repeated model call may produce different
-language content. Hashes and timestamps make those differences traceable. Preserve failed local
-artifacts for diagnosis, but do not publish raw transcripts.
+Writes that establish durable state use atomic replacement. Provider retries may differ, so hashes
+and timestamps preserve provenance. Token totals are recorded only when exact values are available;
+missing values remain explicitly unavailable.

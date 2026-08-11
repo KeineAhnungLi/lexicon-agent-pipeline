@@ -2,7 +2,7 @@
 
 Only data with a clear right to redistribute may be committed.
 
-The public demo contains 15 entries newly authored for this repository from ordinary language
+The public demo contains 15 entries and 29-field agent records newly authored for this repository from ordinary language
 knowledge. They cover nouns, verbs, a reflexive and separable verb, adjective, adverbs, preposition,
 conjunction, pronoun, fixed phrase, capitalization ambiguity, bracket notation, and an explicitly
 context-dependent abbreviation. They are synthetic fixtures, not benchmark results and not
@@ -10,6 +10,8 @@ excerpts from the private production corpus.
 
 The public synthetic examples, demo word list, and MockProvider fixtures are dedicated under
 CC0-1.0 as specified in `DATA_LICENSE`. Code, prompts, and documentation are licensed under MIT.
+The final 30-field demo is created only at runtime by mechanically deriving `meaning_merged`; it is
+not a committed production artifact.
 
 Before adding data:
 

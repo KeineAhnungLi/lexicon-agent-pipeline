@@ -1,164 +1,99 @@
-# lexicon-agent-pipeline
+# Lexicon Agent Pipeline
 
-A reproducible dual-agent workflow for structured lexicon generation, independent linguistic
-review, mechanical validation, resumable batch execution, and human-calibrated evaluation.
-
-一套面向多语言结构化词库生产的双 Agent Pipeline：生成与审校使用独立上下文，程序仅负责
-编排、验证、恢复与合并，不以规则生成语言语义内容。
+Reproducible orchestration for a German–Chinese learner lexicon with two execution modes and one
+shared data contract.
 
 > **Public-data boundary:** this repository contains only 15 newly authored synthetic demo entries.
-> It does **not** contain the non-public 4,812-entry production list, source spreadsheets, historical
-> model outputs, or raw agent transcripts.
->
-> **Quality boundary:** validator PASS means that JSON, row count, 30-field order, indices, input
-> identity, enums, and selected cross-field invariants pass. It does **not** prove linguistic,
-> grammatical, or translation accuracy.
->
-> **Demo boundary:** CI and `demo` replay labeled MockProvider fixtures and call no paid model.
-> Formal Codex runs require a locally installed, already authenticated Codex CLI on the host.
->
-> **License:** code, prompts, and documentation use the permissive [MIT License](LICENSE). The
-> original synthetic public examples and MockProvider fixtures use [CC0-1.0](DATA_LICENSE).
+> It does **not** contain the private 4,812-entry legacy list, other production lists, source spreadsheets, historical outputs, raw
+> transcripts, credentials, or third-party dictionary/corpus data.
+> No private production data is included.
 
-## What it does
+> **Quality boundary:** validator PASS confirms serialization, identity, field rules, and mechanical
+> invariants. It does not prove linguistic accuracy. Human sampling remains required.
 
-```text
-Input Words
-    ↓
-Batching and Prompt Rendering
-    ↓
-Generation Agent (independent process)
-    ↓
-Mechanical Validator
-    ↓
-Independent Review Agent (new process)
-    ↓
-Mechanical Validator
-    ↓
-Judge / Human Sampling
-    ↓
-Reviewed-only Merge and Quality Report
-```
+## Contract
 
-The included reference profile is German–Chinese A1/A2 with a fixed 30-field JSONL schema. The
-provider and evaluation interfaces are extensible, but the repository does not claim that the
-current prompt is language-independent.
+Generation and independent review produce exactly 29 ordered fields:
 
-## No-cost reproducible demo
+`first`, `word`, `spell_word`, `class_options`, `class`, `change`, `pronunciation`,
+`correct_option`, followed by seven `meaningN`, `collocationN`, `collocationN_translation` groups.
 
-Python 3.10–3.12 is supported.
+Agents do not generate examples or `meaning_merged`. Final export has 30 fields because the merger
+inserts `meaning_merged` immediately after `correct_option` by joining all non-`—` meanings in
+order with the full-width semicolon `；`.
+
+- Agent schema: `schemas/lexicon_agent_record.schema.json`
+- Final schema: `schemas/lexicon_record.schema.json`
+- Contract and prompt version: `2.0.0`
+
+## Execution modes
+
+- `simple`: generation → validation → merge from the valid `.generated.jsonl` artifact.
+- `full`: generation → validation → independent review → validation → merge from the valid
+  `.reviewed.jsonl` artifact.
+
+Both modes use the same 29-field agent contract and deterministic final derivation. A full-mode
+review artifact is never silently substituted with the draft. Recovery validates artifacts rather
+than trusting manifest state alone.
+
+## Offline demo
 
 ```bash
-python -m venv .venv
-# Activate the environment for your shell, then:
-python -m pip install -e ".[dev,docs]"
+python -m pip install -e .
 lexicon-pipeline --config examples/project.demo.json demo --reset
 ```
 
-The command prepares one 15-entry batch, renders the current prompt, replays distinct generation
-and review fixtures, validates both, merges only the reviewed output, and writes provenance and
-quality reports under ignored `examples/demo_workspace/` and `examples/expected/runtime/`.
+The MockProvider copies synthetic 29-field fixtures without calling a model. The merger creates a
+30-field final file under ignored runtime directories.
 
-Run the release checks:
+## Production profile
 
-```bash
-ruff check .
-mypy
-pytest
-lexicon-pipeline audit-public-release --root .
-mkdocs build --strict
-```
-
-## Formal Codex CLI run
-
-The production example is intentionally quality-first: **200 entries per batch**, **GPT-5.6 Sol**,
-**xhigh reasoning effort**, and a 3600-second provider timeout. Generation and review are separate
-`codex exec` processes and therefore receive the same explicit model / reasoning configuration
-independently.
-
-Production word lists belong in ignored `local_inputs/`; do not commit them. Prepare a UTF-8 TSV
-whose first row is the single header `word`, then:
+Copy `project.example.json` to ignored `project.json`, place the private TSV at
+`local_inputs/words.tsv`, then run:
 
 ```bash
-mkdir -p local_inputs
-# Put the authorized input at local_inputs/words.tsv
-cp project.example.json project.json
-python -m venv .venv
-# Activate the environment for your shell, then:
-python -m pip install -e ".[dev,docs]"
-lexicon-pipeline audit
-lexicon-pipeline prepare
-lexicon-pipeline render
-lexicon-pipeline inspect-prompt --batch 1 --show
-lexicon-pipeline run
-lexicon-pipeline merge
-lexicon-pipeline report
+lexicon-pipeline --config project.json audit
+lexicon-pipeline --config project.json prepare
+lexicon-pipeline --config project.json render
+lexicon-pipeline --config project.json run --mode full
+lexicon-pipeline --config project.json merge
+lexicon-pipeline --config project.json report
 ```
 
-`project.example.json` contains the production defaults. `provider_options.reasoning_effort` is a
-first-class option and is passed to Codex as `model_reasoning_effort`; there is no need to hide it
-inside `extra_args`.
+The reference quality-first configuration uses GPT-5.6 Sol, `xhigh` reasoning, and 200 entries per
+batch. The simple mode uses the same model defaults while skipping the separate review invocation.
+Authentication remains host-managed and is never stored here.
 
-Authentication is deliberately not embedded in this repository or Docker image. The host user must
-already have an authenticated Codex CLI. Inspect the locally installed CLI’s help before adding
-provider `extra_args`; unsafe sandbox-bypass flags are not defaults.
-
-Useful recovery modes:
+To run the simple path, replace the final three commands above with:
 
 ```bash
-lexicon-pipeline run --mode generation-only
-lexicon-pipeline run --mode review-only
-lexicon-pipeline run --batch 3
-lexicon-pipeline validate --batch 3 --stage reviewed
-lexicon-pipeline inspect-prompt --json
+lexicon-pipeline --config project.json run --mode generation-only
+lexicon-pipeline --config project.json merge --stage generated
+lexicon-pipeline --config project.json report --stage generated
 ```
 
-Generated-only batches resume at review. Valid reviewed batches are skipped. A failed review never
-becomes mergeable.
+If a provider transcript exposes an exact token count, reports may record it. Missing token data is
+reported as unavailable; it is never fabricated or presented as exact.
 
-### Handoff from a directory containing only a word-list file
+## Input and recovery
 
-A fresh coding agent can clone this repository into a child directory, copy/convert the sole input
-file into `local_inputs/words.tsv`, copy `project.example.json` to ignored `project.json`, and then
-run the formal sequence above. Conversion may change only the container format: preserve entry
-text and order, do not lowercase, lemmatize, translate, deduplicate, or otherwise normalize semantic
-content before the pipeline sees it.
+Input is UTF-8 TSV beginning with `word`; optional `expected_pos` disambiguates homographs. The
+lexical spelling, order, and global numbering are preserved. Manifest v2 records contract version
+and separate hashes for agent and final schemas. A v1 manifest belongs to the old contract and must
+be recreated with `prepare`; it is not resumed silently.
 
-This makes the repository the source of truth for prompts, schema, provider configuration,
-validation, recovery, review isolation, merge policy, and reporting. The outer coding agent should
-orchestrate the run rather than reimplement the lexicon-generation method in its own prompt.
-
-## Motivation and boundaries
-
-Large lexicon jobs need more than one model response: they need immutable input alignment,
-independent review, explicit incomplete states, recovery after quota/network/process failures, and
-artifacts that can be audited. This project makes those controls reusable while keeping semantic
-decisions inside agent or human review.
-
-The current evaluation package is a planned, human-calibrated framework. It defines exact-match,
-sampling, rubric, Judge-record, and aggregation interfaces but publishes no accuracy numbers. See
-[docs/EVALUATION.md](docs/EVALUATION.md) and [docs/ERROR_TAXONOMY.md](docs/ERROR_TAXONOMY.md).
-
-Current limitations include a German–Chinese A1/A2 reference prompt, no implemented API provider,
-no CSV adjudication UI, no benchmark corpus, and no proof of semantic correctness from structural
-PASS. Copyright and privacy review remain release-owner responsibilities for newly added data.
+Valid reviewed batches resume as complete in full mode. Valid generated-only batches resume at
+review in full mode and are directly mergeable in simple mode. Invalid or partial artifacts are
+never merged.
 
 ## Repository map
 
 - `src/lexicon_pipeline/`: CLI, providers, recovery, validation, merge, reporting, evaluation.
-- `prompts/`: canonical generation/review prompts and immutable version snapshots.
-- `schemas/`: JSON Schema contracts for records, manifests, and evaluations.
-- `examples/`: original synthetic input, examples, and MockProvider configuration.
-- `tests/`: offline tests and labeled synthetic fixtures.
-- `docs/`: architecture, operations, schema, evaluation, security, and case study.
-- `.github/workflows/`: offline CI and MkDocs Pages build/deploy definitions.
-- `AGENTS.md` and `NEXT_AGENT_PROMPT.md`: non-shortcut, goal/subagent-aware production handoff.
+- `prompts/`: live v2 prompts and immutable version snapshots.
+- `schemas/`: agent, final, manifest, and evaluation JSON Schemas.
+- `examples/`: public synthetic demo input and agent records.
+- `tests/fixtures/mock/`: public synthetic provider fixtures.
+- `docs/`: architecture, contracts, operation, recovery, security, and evaluation.
 
-Start with [docs/PIPELINE_GUIDE.md](docs/PIPELINE_GUIDE.md) for operations and
-[PUBLIC_DATA_POLICY.md](PUBLIC_DATA_POLICY.md) before adding any data.
-
-## Citation
-
-No archival DOI or release exists yet. After publication, cite the repository URL, commit SHA,
-prompt version, provider/model configuration, and access date. Do not cite the private 4,812-entry
-case-study data as publicly available.
+Code and documentation are MIT licensed. Public synthetic fixtures are CC0-1.0; see
+`DATA_LICENSE`. See `PRIVATE_DATA.md` and `PUBLIC_DATA_POLICY.md` before publishing changes.

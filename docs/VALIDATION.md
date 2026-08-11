@@ -1,13 +1,12 @@
-# Validation boundary
+# Mechanical validation
 
-Mechanical validation checks UTF-8 readability, JSONL syntax, one object per row, exact row count,
-30 keys in canonical serialized order, field types, global `first` sequence, byte-for-text `word`
-alignment, enum allow-lists, required meaning, and the example/translation pair. Merge repeats all
-batch checks and the global sequence.
+Agent-stage validation checks JSONL parsing, 29-key order, types, row count, global `first`, exact
+`word`, class domains and mappings, the `correct_option` prefix, required `meaning1`, and seven
+collocation/translation pairs. It rejects `meaning_merged` and example fields.
 
-It does not determine noun gender, plural, conjugation, pronunciation, meaning, sense coverage,
-collocation naturalness, translation, or CEFR level. Those are agent/Judge/human evaluation
-questions. Therefore reports use “mechanical validation PASS,” never “semantic accuracy.”
+Final validation checks the 30-key order and additionally requires `meaning_merged` to equal
+`；`.join of the non-`—` numbered meanings. Merge revalidates its selected source and final output.
 
-On a stage validation failure the same stage may be invoked again with the validator report, up to
-the configured attempt limit. The program does not patch semantic fields itself.
+Mechanical PASS does not establish gender, inflection, pronunciation, meaning, sense coverage,
+collocation naturalness, or translation quality. Those require independent review and human
+sampling.

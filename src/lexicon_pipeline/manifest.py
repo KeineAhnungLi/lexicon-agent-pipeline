@@ -35,14 +35,19 @@ def new_manifest(
             }
         )
     return {
-        "manifest_version": 1,
+        "manifest_version": 2,
+        "contract_version": "2.0.0",
+        "project": config.project_name,
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "batch_size": config.batch_size,
+        "prompt_version": "2.0.0",
         "config_hash": sha256_file(config.config_path),
         "prompt_hash": sha256_file(config.prompt_template),
         "review_prompt_hash": sha256_file(config.review_prompt_template),
         "generation_spec_hash": sha256_file(config.generation_spec),
         "examples_hash": sha256_file(config.examples_file),
-        "schema_hash": sha256_file(config.schema_file),
+        "agent_schema_hash": sha256_file(config.agent_schema_file),
+        "final_schema_hash": sha256_file(config.schema_file),
         "input_hash": sha256_file(config.words_file),
         "batches": batches,
     }
@@ -52,6 +57,10 @@ def read_manifest(path: Path) -> dict[str, Any]:
     value = load_json(path)
     if not isinstance(value, dict) or not isinstance(value.get("batches"), list):
         raise ValueError(f"invalid manifest: {path}")
+    if value.get("manifest_version") != 2 or value.get("contract_version") != "2.0.0":
+        raise ValueError(
+            "incompatible manifest contract; run prepare again with a fresh workspace"
+        )
     return cast(dict[str, Any], value)
 
 

@@ -23,8 +23,7 @@ def _record_provenance(
     batch: dict[str, Any],
     stage: str,
     artifact: Path,
-    provider: str,
-    model: str | None,
+    result: AgentRunResult,
 ) -> None:
     path = config.reports_dir / f"{batch_stem(int(batch['id']))}.{stage}.provenance.json"
     atomic_write_json(
@@ -33,19 +32,22 @@ def _record_provenance(
             "batch_id": int(batch["id"]),
             "run_id": str(uuid4()),
             "stage": stage,
-            "provider": provider,
-            "model": model,
+            "provider": result.provider,
+            "model": result.model,
+            "reasoning_effort": result.reasoning_effort,
+            "tokens_used": result.tokens_used,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "prompt_version": "1.2.0",
+            "prompt_version": "2.0.0",
             "prompt_sha256": sha256_file(config.prompt_template),
             "review_prompt_sha256": sha256_file(config.review_prompt_template),
             "generation_spec_sha256": sha256_file(config.generation_spec),
             "examples_sha256": sha256_file(config.examples_file),
-            "schema_sha256": sha256_file(config.schema_file),
+            "agent_schema_sha256": sha256_file(config.agent_schema_file),
+            "final_schema_sha256": sha256_file(config.schema_file),
             "config_sha256": sha256_file(config.config_path),
             "artifact": artifact.name,
             "artifact_sha256": sha256_file(artifact),
-            "synthetic_demo": provider == "mock",
+            "synthetic_demo": result.provider == "mock",
         },
     )
 
@@ -64,6 +66,7 @@ def _validate_or_raise(path: Path, batch: dict[str, Any]) -> None:
         expected_words=[str(word) for word in batch["words"]],
         expected_first=int(batch["start"]),
         expected_pos=_expected_pos(batch),
+        schema="agent",
     )
     if not report.valid:
         messages = "; ".join(f"{item.code}: {item.message}" for item in report.issues[:8])
@@ -97,9 +100,30 @@ def _run_stage_with_repairs(
         )
         try:
             _validate_or_raise(output, batch)
+            atomic_write_json(
+                config.reports_dir
+                / f"{batch_stem(int(batch['id']))}.{stage}.attempt_{attempt}.validation.json",
+                {
+                    "valid": True,
+                    "schema": "agent",
+                    "artifact": output.name,
+                    "attempt": attempt,
+                },
+            )
             return result
         except ValidationFailure as exc:
             last_error = exc
+            atomic_write_json(
+                config.reports_dir
+                / f"{batch_stem(int(batch['id']))}.{stage}.attempt_{attempt}.validation.json",
+                {
+                    "valid": False,
+                    "schema": "agent",
+                    "artifact": output.name,
+                    "attempt": attempt,
+                    "error": str(exc),
+                },
+            )
             current_prompt = (
                 f"{prompt}\n\nThe previous artifact failed mechanical validation:\n{exc}\n"
                 "Read every record again, repair the complete artifact, overwrite the requested "
@@ -146,15 +170,17 @@ def run_pipeline(
                     prompt=prompt,
                     output=generated,
                 )
-                _record_provenance(
-                    config, batch, "generation", generated, result.provider, result.model
-                )
+                _record_provenance(config, batch, "generation", generated, result)
                 batch["state"] = "generated"
                 batch["attempts"] = int(batch["attempts"]) + 1
                 batch["last_error"] = None
                 save_manifest(config.manifest_path, manifest)
                 action = "review"
             if mode == "generation-only":
+                if action == "review":
+                    batch["state"] = "generated"
+                    batch["last_error"] = None
+                    save_manifest(config.manifest_path, manifest)
                 continue
             if action == "review":
                 review_prompt = render_review_prompt(config, batch, generated, reviewed)
@@ -170,9 +196,7 @@ def run_pipeline(
                     prompt=review_prompt,
                     output=reviewed,
                 )
-                _record_provenance(
-                    config, batch, "review", reviewed, result.provider, result.model
-                )
+                _record_provenance(config, batch, "review", reviewed, result)
                 batch["state"] = "reviewed"
                 batch["attempts"] = int(batch["attempts"]) + 1
                 batch["last_error"] = None

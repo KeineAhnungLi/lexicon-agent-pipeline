@@ -1,37 +1,41 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Pipeline manifest",
+  "title": "Lexicon pipeline manifest v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "manifest_version", "created_at", "config_hash", "prompt_hash", "review_prompt_hash",
-    "generation_spec_hash", "examples_hash", "schema_hash", "input_hash", "batches"
+    "manifest_version", "contract_version", "project", "created_at", "batch_size", "config_hash",
+    "prompt_version", "prompt_hash", "review_prompt_hash", "generation_spec_hash",
+    "examples_hash", "agent_schema_hash", "final_schema_hash", "input_hash", "batches"
   ],
   "properties": {
-    "manifest_version": { "const": 1 },
+    "manifest_version": { "const": 2 },
+    "contract_version": { "const": "2.0.0" },
+    "project": { "type": "string", "minLength": 1 },
     "created_at": { "type": "string", "format": "date-time" },
+    "batch_size": { "type": "integer", "minimum": 1 },
     "config_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "prompt_version": { "const": "2.0.0" },
     "prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "review_prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "generation_spec_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "examples_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "schema_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "agent_schema_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "final_schema_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "batches": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "start", "end", "words", "expected_pos", "state", "attempts"],
+        "required": ["id", "start", "end", "words", "expected_pos", "state", "attempts", "last_error"],
         "properties": {
           "id": { "type": "integer", "minimum": 1 },
           "start": { "type": "integer", "minimum": 1 },
           "end": { "type": "integer", "minimum": 1 },
           "words": { "type": "array", "items": { "type": "string", "minLength": 1 } },
           "expected_pos": { "type": "array", "items": { "type": "string" } },
-          "state": {
-            "enum": ["prepared", "rendered", "generated", "reviewed", "failed"]
-          },
+          "state": { "enum": ["prepared", "rendered", "generated", "reviewed", "failed"] },
           "attempts": { "type": "integer", "minimum": 0 },
           "last_error": { "type": ["string", "null"] }
         }

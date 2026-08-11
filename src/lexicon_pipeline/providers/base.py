@@ -13,6 +13,8 @@ class AgentRunResult:
     transcript_path: Path | None
     command: tuple[str, ...]
     model: str | None = None
+    reasoning_effort: str | None = None
+    tokens_used: int | None = None
 
 
 class AgentProvider(Protocol):

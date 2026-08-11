@@ -3,60 +3,18 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from lexicon_pipeline.constants import (
-    ALLOWED_LEVELS,
-    ALLOWED_POS,
-    ALLOWED_REGIONS,
-    ALLOWED_REGISTER,
-    FIELD_NAMES,
+    AGENT_FIELD_NAMES,
+    ALLOWED_CLASS_OPTIONS,
+    ALLOWED_CLASS_PARTS,
+    EXPECTED_POS_ALIASES,
+    FINAL_FIELD_NAMES,
     MISSING_VALUE,
 )
 
-EXPECTED_POS_ALIASES = {
-    "adj": "Adjektiv",
-    "adjective": "Adjektiv",
-    "adjektiv": "Adjektiv",
-    "adv": "Adverb",
-    "adverb": "Adverb",
-    "art": "Artikel",
-    "article": "Artikel",
-    "artikel": "Artikel",
-    "intj": "Interjektion",
-    "interjection": "Interjektion",
-    "interjektion": "Interjektion",
-    "conj": "Konjunktion",
-    "conjunction": "Konjunktion",
-    "konjunktion": "Konjunktion",
-    "contr": "Kontraktion",
-    "contraction": "Kontraktion",
-    "kontraktion": "Kontraktion",
-    "n": "Nomen",
-    "noun": "Nomen",
-    "nomen": "Nomen",
-    "substantiv": "Nomen",
-    "num": "Numerale",
-    "numeral": "Numerale",
-    "numerale": "Numerale",
-    "part": "Partikel",
-    "particle": "Partikel",
-    "partikel": "Partikel",
-    "phr": "Phrase",
-    "phrase": "Phrase",
-    "postp": "Postposition",
-    "postpos": "Postposition",
-    "postposition": "Postposition",
-    "prep": "Präposition",
-    "preposition": "Präposition",
-    "präposition": "Präposition",
-    "praeposition": "Präposition",
-    "pron": "Pronomen",
-    "pronoun": "Pronomen",
-    "pronomen": "Pronomen",
-    "v": "Verb",
-    "verb": "Verb",
-}
+ArtifactSchema = Literal["agent", "final"]
 
 
 @dataclass(frozen=True)
@@ -73,6 +31,7 @@ class ValidationReport:
     valid: bool
     row_count: int
     expected_row_count: int | None
+    schema: ArtifactSchema
     issues: tuple[ValidationIssue, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -85,7 +44,7 @@ def normalize_expected_pos(value: str) -> str | None:
     cleaned = value.strip()
     if not cleaned:
         return None
-    if cleaned in ALLOWED_POS:
+    if cleaned in ALLOWED_CLASS_PARTS:
         return cleaned
     return EXPECTED_POS_ALIASES.get(cleaned.casefold())
 
@@ -94,7 +53,7 @@ def read_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[ValidationIssue]]
     rows: list[dict[str, Any]] = []
     issues: list[ValidationIssue] = []
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
     except OSError as exc:
         return [], [ValidationIssue("FILE_READ", str(exc))]
     for number, line in enumerate(lines, start=1):
@@ -113,15 +72,47 @@ def read_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[ValidationIssue]]
     return rows, issues
 
 
+def expected_class_option(word_class: str) -> str | None:
+    parts = word_class.split("/")
+    if any(part not in ALLOWED_CLASS_PARTS for part in parts):
+        return None
+    if "N." in parts or "Abk." in parts:
+        return "N."
+    if "V." in parts:
+        return "V."
+    if "Adj." in parts:
+        return "Adj."
+    if word_class == "Wend.":
+        return "Wend."
+    return "others"
+
+
+def derive_meaning_merged(row: dict[str, Any]) -> str:
+    return "；".join(
+        str(row[f"meaning{number}"])
+        for number in range(1, 8)
+        if row.get(f"meaning{number}") != MISSING_VALUE
+    )
+
+
+def with_derived_meaning_merged(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        field: derive_meaning_merged(row) if field == "meaning_merged" else row[field]
+        for field in FINAL_FIELD_NAMES
+    }
+
+
 def validate_jsonl(
     path: Path,
     *,
     expected_words: list[str] | None = None,
     expected_first: int | None = None,
     expected_pos: list[str] | None = None,
+    schema: ArtifactSchema = "agent",
 ) -> ValidationReport:
     rows, issues = read_jsonl(path)
     expected_count = len(expected_words) if expected_words is not None else None
+    field_names = AGENT_FIELD_NAMES if schema == "agent" else FINAL_FIELD_NAMES
     if (
         expected_pos is not None
         and expected_words is not None
@@ -135,19 +126,15 @@ def validate_jsonl(
         )
     if expected_count is not None and len(rows) != expected_count:
         issues.append(
-            ValidationIssue(
-                "ROW_COUNT",
-                f"expected {expected_count} records, found {len(rows)}",
-            )
+            ValidationIssue("ROW_COUNT", f"expected {expected_count} records, found {len(rows)}")
         )
     for offset, row in enumerate(rows):
         line = offset + 1
-        keys = tuple(row.keys())
-        if keys != FIELD_NAMES:
+        if tuple(row) != field_names:
             issues.append(
                 ValidationIssue(
                     "FIELD_ORDER",
-                    f"expected fields in canonical order; found {list(keys)}",
+                    f"expected {schema} fields in canonical order; found {list(row)}",
                     line,
                 )
             )
@@ -155,7 +142,9 @@ def validate_jsonl(
         for name, value in row.items():
             if not isinstance(value, (str, int)):
                 issues.append(
-                    ValidationIssue("FIELD_TYPE", "field must be a string or integer", line, name)
+                    ValidationIssue(
+                        "FIELD_TYPE", "field must be a string or integer", line, name
+                    )
                 )
             elif isinstance(value, str) and not value.strip():
                 issues.append(ValidationIssue("EMPTY_VALUE", "use — for missing data", line, name))
@@ -170,16 +159,45 @@ def validate_jsonl(
                     "first",
                 )
             )
-        if expected_words is not None and offset < len(expected_words):
-            if row["word"] != expected_words[offset]:
-                issues.append(
-                    ValidationIssue(
-                        "WORD_MISMATCH",
-                        f"expected {expected_words[offset]!r}, found {row['word']!r}",
-                        line,
-                        "word",
-                    )
+        if (
+            expected_words is not None
+            and offset < len(expected_words)
+            and row["word"] != expected_words[offset]
+        ):
+            issues.append(
+                ValidationIssue(
+                    "WORD_MISMATCH",
+                    f"expected {expected_words[offset]!r}, found {row['word']!r}",
+                    line,
+                    "word",
                 )
+            )
+        word_class = str(row["class"])
+        option = expected_class_option(word_class)
+        if option is None:
+            issues.append(
+                ValidationIssue(
+                    "CLASS_VALUE", f"unsupported class {word_class!r}", line, "class"
+                )
+            )
+        if row["class_options"] not in ALLOWED_CLASS_OPTIONS:
+            issues.append(
+                ValidationIssue(
+                    "CLASS_OPTION_VALUE",
+                    f"unsupported class_options {row['class_options']!r}",
+                    line,
+                    "class_options",
+                )
+            )
+        elif option is not None and row["class_options"] != option:
+            issues.append(
+                ValidationIssue(
+                    "CLASS_OPTION_MISMATCH",
+                    f"class {word_class!r} requires class_options {option!r}",
+                    line,
+                    "class_options",
+                )
+            )
         if expected_pos is not None and offset < len(expected_pos) and expected_pos[offset].strip():
             normalized = normalize_expected_pos(expected_pos[offset])
             if normalized is None:
@@ -188,44 +206,62 @@ def validate_jsonl(
                         "EXPECTED_POS_VALUE",
                         f"unsupported expected_pos hint {expected_pos[offset]!r}",
                         line,
-                        "pos",
+                        "class",
                     )
                 )
-            elif row["pos"] != normalized:
+            elif normalized not in word_class.split("/"):
                 issues.append(
                     ValidationIssue(
                         "EXPECTED_POS_MISMATCH",
-                        f"expected pos {normalized!r} from hint {expected_pos[offset]!r}, "
-                        f"found {row['pos']!r}",
+                        f"expected class component {normalized!r} from hint "
+                        f"{expected_pos[offset]!r}, found {word_class!r}",
                         line,
-                        "pos",
+                        "class",
                     )
                 )
-        for field, allowed in (
-            ("level", ALLOWED_LEVELS),
-            ("pos", ALLOWED_POS),
-            ("register", ALLOWED_REGISTER),
-            ("region", ALLOWED_REGIONS),
-        ):
-            if row[field] not in allowed:
-                issues.append(
-                    ValidationIssue(
-                        "ENUM_VALUE",
-                        f"{row[field]!r} is outside the mechanical allow-list",
-                        line,
-                        field,
-                    )
-                )
-        if row["meaning"] == MISSING_VALUE:
-            issues.append(
-                ValidationIssue("REQUIRED_MEANING", "meaning may not be missing", line, "meaning")
-            )
-        if (row["example"] == MISSING_VALUE) != (row["translation"] == MISSING_VALUE):
+        if not str(row["correct_option"]).startswith(f"{word_class} "):
             issues.append(
                 ValidationIssue(
-                    "EXAMPLE_PAIR",
-                    "example and translation must both be present or both be —",
+                    "CORRECT_OPTION_PREFIX",
+                    "correct_option must start with the exact class and one space",
                     line,
+                    "correct_option",
+                )
+            )
+        if row["meaning1"] == MISSING_VALUE:
+            issues.append(
+                ValidationIssue(
+                    "REQUIRED_MEANING", "meaning1 may not be missing", line, "meaning1"
+                )
+            )
+        for number in range(1, 8):
+            collocation = row[f"collocation{number}"]
+            translation = row[f"collocation{number}_translation"]
+            if (collocation == MISSING_VALUE) != (translation == MISSING_VALUE):
+                issues.append(
+                    ValidationIssue(
+                        "COLLOCATION_PAIR",
+                        f"collocation{number} and its translation must both be present "
+                        "or both be —",
+                        line,
+                    )
+                )
+            if str(row[f"meaning{number}"]).startswith("v."):
+                issues.append(
+                    ValidationIssue(
+                        "LOWERCASE_VERB_LABEL",
+                        "verb meaning labels must use Vt./Vi./Vr./Vimp., not v.",
+                        line,
+                        f"meaning{number}",
+                    )
+                )
+        if schema == "final" and row["meaning_merged"] != derive_meaning_merged(row):
+            issues.append(
+                ValidationIssue(
+                    "MEANING_MERGED_DERIVATION",
+                    "meaning_merged must equal the mechanical join of non-dash meaning1..meaning7",
+                    line,
+                    "meaning_merged",
                 )
             )
     return ValidationReport(
@@ -233,5 +269,6 @@ def validate_jsonl(
         valid=not issues,
         row_count=len(rows),
         expected_row_count=expected_count,
+        schema=schema,
         issues=tuple(issues),
     )
